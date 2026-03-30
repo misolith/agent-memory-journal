@@ -158,6 +158,16 @@ The repository includes a starter file at `examples/config.example.json`.
 - useful both for agents and humans
 - small enough to understand quickly
 
+
+## Agent-oriented setup
+
+If you want another agent to become productive from the repository URL alone, point it to:
+
+- `SKILL.md` for procedural usage
+- `examples/agent-install.md` for installation and first-run instructions
+
+The intended flow is: clone repo -> create venv -> run tests -> use CLI with `--root`.
+
 ## Testing
 
 Run tests with:

@@ -1,0 +1,101 @@
+---
+name: agent-memory-journal
+description: Durable file-based memory journaling, recall, and review for agents. Use when an agent needs to store important notes, search prior notes, prevent duplicate memory bullets, review recent activity, identify recurring topics, or suggest long-term memory candidates from daily notes. Useful for workflows involving MEMORY.md, daily journal files, lightweight memory systems, and agent continuity without a database.
+---
+
+# Agent Memory Journal
+
+Use the bundled CLI for durable memory operations.
+
+## Core workflow
+
+1. Choose a memory root.
+   - Prefer `--root <path>` explicitly.
+   - If omitted, the tool uses `AGENT_MEMORY_ROOT` or the current working directory.
+2. Keep daily notes in `<root>/memory/YYYY-MM-DD.md`.
+3. Keep long-term memory in `<root>/MEMORY.md`.
+4. Use the CLI instead of manually appending when duplicate protection or review summaries matter.
+
+## Commands
+
+### Add a note
+
+```bash
+python3 agent_memory_journal.py --root /path/to/root add --note "Remember to rotate the PAT before Friday"
+```
+
+Add to long-term memory too:
+
+```bash
+python3 agent_memory_journal.py --root /path/to/root add --note "Use WiseGolf app path for live tee-time checks" --long
+```
+
+### Review recent notes
+
+```bash
+python3 agent_memory_journal.py --root /path/to/root recent --days 2
+```
+
+### Search memory
+
+```bash
+python3 agent_memory_journal.py --root /path/to/root search --query "wisegolf"
+```
+
+### Find patterns
+
+```bash
+python3 agent_memory_journal.py --root /path/to/root topics --days 14
+python3 agent_memory_journal.py --root /path/to/root cadence --days 14
+python3 agent_memory_journal.py --root /path/to/root digest --days 7
+python3 agent_memory_journal.py --root /path/to/root candidates --days 7
+```
+
+### Extract memory-worthy lines from raw text
+
+```bash
+cat transcript.txt | python3 agent_memory_journal.py --root /path/to/root extract
+```
+
+## Config
+
+Optional config file:
+- `<root>/agent-memory-journal.json`
+- or pass `--config-file <path>`
+
+Current config supports:
+- `triggers`: regex list used by `extract` and `candidates`
+
+See `examples/config.example.json`.
+
+## Installation for agents
+
+Use direct execution first. Do not assume packaging is installed.
+
+### Minimal setup
+
+```bash
+git clone <REPO_URL>
+cd agent-memory-journal
+python3 -m venv .venv
+.venv/bin/pip install pytest
+```
+
+Run tests:
+
+```bash
+.venv/bin/pytest -q
+```
+
+Run the tool directly:
+
+```bash
+python3 agent_memory_journal.py --root /path/to/root recent --days 2
+```
+
+## Notes for agents
+
+- Prefer explicit `--root` in automation.
+- Use `--long` sparingly; not every note belongs in long-term memory.
+- Use `candidates` before promoting many notes into `MEMORY.md`.
+- Keep the memory system file-based and inspectable.
