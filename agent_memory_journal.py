@@ -12,13 +12,12 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 TRIGGERS = [
-    r'\bmuista\b',
-    r'\bremember\b',
-    r'\bpäät(?:ös|ettiin)\b',
-    r'\bfrom now on\b',
-    r'\bjatkossa\b',
-    r'\baina\b',
-    r'\bprioriteetti\b',
+    r'remember',
+    r'decision',
+    r'decided',
+    r'from now on',
+    r'always',
+    r'priority',
 ]
 
 LINE_RE = re.compile(r"^-\s+(\d{2}:\d{2})\s+(.*)$")
@@ -459,7 +458,16 @@ def print_candidates(paths: JournalPaths, days: int = 7, limit: int = 10, min_sc
 
 
 def build_parser():
-    ap = argparse.ArgumentParser(description='Durable memory journal for agents and operators')
+    ap = argparse.ArgumentParser(
+        description='Durable memory journal for agents and operators',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Examples:\n"
+            "  agent-memory-journal --root /workspace add --note \"Remember to rotate PAT\"\n"
+            "  agent-memory-journal --root /workspace recent --days 2\n"
+            "  agent-memory-journal --root /workspace digest --days 7"
+        ),
+    )
     ap.add_argument('--root', type=Path, default=default_root(), help='Memory root directory (default: $AGENT_MEMORY_ROOT or current directory)')
     ap.add_argument('--memory-dir', default='memory', help='Daily memory directory relative to root (default: memory)')
     ap.add_argument('--long-file', default='MEMORY.md', help='Long-term memory filename relative to root (default: MEMORY.md)')
