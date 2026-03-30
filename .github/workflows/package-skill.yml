@@ -1,0 +1,36 @@
+name: Package skill zip
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  package-skill:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build skill bundle
+        run: |
+          rm -rf dist/agent-memory-journal-skill
+          mkdir -p dist/agent-memory-journal-skill/examples
+          cp SKILL.md agent_memory_journal.py README.md dist/agent-memory-journal-skill/
+          cp examples/agent-install.md examples/config.example.json dist/agent-memory-journal-skill/examples/
+          cd dist
+          zip -r agent-memory-journal-skill.zip agent-memory-journal-skill
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-memory-journal-skill
+          path: dist/agent-memory-journal-skill.zip
+
+      - name: Attach zip to GitHub release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/agent-memory-journal-skill.zip
