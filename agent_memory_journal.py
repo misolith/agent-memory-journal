@@ -11,15 +11,6 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
 
-TRIGGERS = [
-    r'remember',
-    r'decision',
-    r'decided',
-    r'from now on',
-    r'always',
-    r'priority',
-]
-
 LINE_RE = re.compile(r"^-\s+(\d{2}:\d{2})\s+(.*)$")
 LONG_BULLET_RE = re.compile(r"^-\s+(.*)$")
 DAILY_FILE_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})\.md$")
@@ -41,6 +32,31 @@ def default_root() -> Path:
     if env:
         return Path(env).expanduser().resolve()
     return Path.cwd()
+
+
+def default_triggers():
+    return [
+        r'\bremember\b',
+        r'\bdecision\b',
+        r'\bdecided\b',
+        r'\bfrom now on\b',
+        r'\balways\b',
+        r'\bpriority\b',
+    ]
+
+
+def load_config(paths: "JournalPaths", config_file: str | None = None) -> dict:
+    if config_file:
+        candidate = Path(config_file).expanduser()
+        if not candidate.is_absolute():
+            candidate = paths.root / candidate
+    else:
+        candidate = paths.root / 'agent-memory-journal.json'
+    if not candidate.exists():
+        return {'triggers': default_triggers(), 'config_path': None}
+    data = json.loads(candidate.read_text(encoding='utf-8'))
+    triggers = data.get('triggers') or default_triggers()
+    return {'triggers': triggers, 'config_path': str(candidate)}
 
 
 @contextmanager
@@ -136,12 +152,12 @@ def append_long(paths: JournalPaths, note: str, dedupe: bool = True) -> bool:
     return True
 
 
-def extract_candidates(text: str):
+def extract_candidates(text: str, triggers=None):
     lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
     out = []
     for ln in lines:
         low = ln.lower()
-        if any(re.search(t, low) for t in TRIGGERS):
+        if any(re.search(t, low) for t in (triggers or default_triggers())):
             out.append(ln)
     return out
 
@@ -417,7 +433,7 @@ def print_digest(paths: JournalPaths, days: int = 7, recent_limit: int = 5, top:
         print('recent_notes: none')
 
 
-def memory_candidates(paths: JournalPaths, days: int = 7, limit: int = 10, min_score: int = 2):
+def memory_candidates(paths: JournalPaths, days: int = 7, limit: int = 10, min_score: int = 2, triggers=None):
     topic_words = {item['word'] for item in memory_topics(paths, days=max(1, days), top=20, samples=1, min_count=2)['topics']}
     out = []
     for p in iter_daily_files(paths, days):
@@ -432,7 +448,7 @@ def memory_candidates(paths: JournalPaths, days: int = 7, limit: int = 10, min_s
             note = m.group(2)
             low = note.lower()
             score = 0
-            triggered = [t for t in TRIGGERS if re.search(t, low)]
+            triggered = [t for t in (triggers or default_triggers()) if re.search(t, low)]
             if triggered:
                 score += len(triggered)
             if any(word in low for word in topic_words):
@@ -445,8 +461,8 @@ def memory_candidates(paths: JournalPaths, days: int = 7, limit: int = 10, min_s
     return {'days_scanned': days, 'candidates': out[: max(1, limit)]}
 
 
-def print_candidates(paths: JournalPaths, days: int = 7, limit: int = 10, min_score: int = 2, as_json: bool = False):
-    summary = memory_candidates(paths, days=max(1, days), limit=max(1, limit), min_score=max(1, min_score))
+def print_candidates(paths: JournalPaths, days: int = 7, limit: int = 10, min_score: int = 2, as_json: bool = False, triggers=None):
+    summary = memory_candidates(paths, days=max(1, days), limit=max(1, limit), min_score=max(1, min_score), triggers=triggers)
     if as_json:
         print(json.dumps(summary, ensure_ascii=False))
         return
@@ -471,6 +487,7 @@ def build_parser():
     ap.add_argument('--root', type=Path, default=default_root(), help='Memory root directory (default: $AGENT_MEMORY_ROOT or current directory)')
     ap.add_argument('--memory-dir', default='memory', help='Daily memory directory relative to root (default: memory)')
     ap.add_argument('--long-file', default='MEMORY.md', help='Long-term memory filename relative to root (default: MEMORY.md)')
+    ap.add_argument('--config-file', help='Optional JSON config path relative to root or absolute')
     sub = ap.add_subparsers(dest='cmd', required=True)
 
     a = sub.add_parser('add', help='Append a note to daily memory')
@@ -533,6 +550,8 @@ def main():
     ap = build_parser()
     args = ap.parse_args()
     paths = JournalPaths(args.root.expanduser().resolve(), args.memory_dir, args.long_file)
+    config = load_config(paths, args.config_file)
+    triggers = config['triggers']
     with global_lock(paths):
         if args.cmd == 'add':
             added_daily = append_daily(paths, args.note, dedupe_minutes=args.dedupe_minutes)
@@ -542,7 +561,7 @@ def main():
                 print('LONG_OK' if added_long else 'LONG_SKIP_DUPLICATE')
         elif args.cmd == 'extract':
             text = args.file.read_text(encoding='utf-8') if args.file else __import__('sys').stdin.read()
-            c = extract_candidates(text)
+            c = extract_candidates(text, triggers=triggers)
             print(json.dumps(c, ensure_ascii=False, indent=2))
         elif args.cmd == 'recent':
             print_recent(paths, days=max(1, args.days), limit=max(1, args.limit), grep=args.grep, as_json=args.json)
@@ -557,7 +576,7 @@ def main():
         elif args.cmd == 'digest':
             print_digest(paths, days=max(1, args.days), recent_limit=max(1, args.recent_limit), top=max(1, args.top), as_json=args.json)
         elif args.cmd == 'candidates':
-            print_candidates(paths, days=max(1, args.days), limit=max(1, args.limit), min_score=max(1, args.min_score), as_json=args.json)
+            print_candidates(paths, days=max(1, args.days), limit=max(1, args.limit), min_score=max(1, args.min_score), as_json=args.json, triggers=triggers)
 
 
 if __name__ == '__main__':

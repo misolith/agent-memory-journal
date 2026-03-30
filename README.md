@@ -131,6 +131,25 @@ Optional path settings:
 - `--memory-dir memory`
 - `--long-file MEMORY.md`
 
+
+### Optional JSON config
+
+You can provide a config file with `--config-file` or place `agent-memory-journal.json` in the root.
+
+Example:
+
+```json
+{
+  "triggers": [
+    "\\bremember\\b",
+    "\\bdecision\\b",
+    "\\bfrom now on\\b"
+  ]
+}
+```
+
+The repository includes a starter file at `examples/config.example.json`.
+
 ## Design goals
 
 - plain files, not a database
