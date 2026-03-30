@@ -57,6 +57,38 @@ agent-memory-journal --root /path/to/root candidates --days 7
 cat transcript.txt | agent-memory-journal --root /path/to/root extract
 ```
 
+## Retrieval-first use
+
+Before solving a new issue, check whether the journal already contains a similar failure, decision, or workflow.
+
+Examples:
+
+```bash
+agent-memory-journal --root /path/to/root search --query "oauth token refresh failed"
+agent-memory-journal --root /path/to/root search --query "playing golf booking flow"
+```
+
+Use this before starting a fresh fix when prior context might already exist.
+
+## End-of-session reflection
+
+At the end of a work session, prefer a small reflective write rather than many fragmented notes.
+
+Good pattern:
+1. Add 1-3 concrete notes for major decisions or failures during the work.
+2. Run `digest` or `candidates` to review what stands out.
+3. Promote only genuinely durable items into long-term memory.
+
+Example:
+
+```bash
+agent-memory-journal --root /path/to/root digest --days 7
+agent-memory-journal --root /path/to/root candidates --days 7
+agent-memory-journal --root /path/to/root add --note "From now on, use the app login path for live tee-time checks" --long
+```
+
+Avoid spamming long-term memory with every operational note.
+
 ## Config
 
 Optional config file:

@@ -75,3 +75,14 @@ Example:
 - use `--long` only for real durable facts or policy
 - use `candidates` before mass-promoting memory items
 - keep files human-readable and easy to diff
+
+## Reflection pattern
+
+Before ending a task or session:
+
+```bash
+agent-memory-journal --root /path/to/memory-root digest --days 7
+agent-memory-journal --root /path/to/memory-root candidates --days 7
+```
+
+If something is clearly durable, then store it with `--long`.
