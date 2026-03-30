@@ -71,11 +71,26 @@ python3 -m venv .venv
 .venv/bin/pip install pytest
 ```
 
-Standalone packaging is still being refined. For now, run the script directly:
+Install in a virtual environment or editable dev mode:
 
 ```bash
-python3 agent_memory_journal.py --help
+python3 -m venv .venv
+.venv/bin/pip install -e .
+agent-memory-journal --help
 ```
+
+## Bootstrap a new memory root
+
+Initialize an empty memory root:
+
+```bash
+agent-memory-journal --root /path/to/root init
+```
+
+This creates:
+- `MEMORY.md`
+- `memory/`
+- optional starter config if `--with-config` is used
 
 ## CLI usage
 
@@ -149,6 +164,26 @@ Example:
 ```
 
 The repository includes a starter file at `examples/config.example.json`.
+
+## Alpha contract (0.1.x)
+
+Stable for the alpha line:
+- file layout: `<root>/MEMORY.md` and `<root>/memory/YYYY-MM-DD.md`
+- commands: `add`, `extract`, `recent`, `search`, `stats`, `topics`, `cadence`, `digest`, `candidates`
+- `--root`, `--config-file`, `--json`, and `--version`
+- sentinel outputs such as `NO_MATCHES` and `NO_CANDIDATES`
+
+Intended for automation:
+- `recent --json`
+- `search --json`
+- `stats --json`
+- `topics --json`
+- `cadence --json`
+- `digest --json`
+- `candidates --json`
+
+Platform note:
+- current locking uses `fcntl`, so the alpha target is POSIX/Linux environments
 
 ## Design goals
 

@@ -79,6 +79,10 @@ def normalize_note(note: str) -> str:
     return text
 
 
+def tokenize(text: str) -> list[str]:
+    return [w.lower() for w in re.findall(r"[A-Za-zÅÄÖåäö0-9-]{3,}", text)]
+
+
 def is_recent_duplicate(paths: JournalPaths, note: str, window_minutes: int) -> bool:
     if window_minutes <= 0:
         return False
@@ -152,6 +156,21 @@ def append_long(paths: JournalPaths, note: str, dedupe: bool = True) -> bool:
     with paths.long.open('a', encoding='utf-8') as f:
         f.write(f"\n- {note.strip()}\n")
     return True
+
+
+def init_memory_root(paths: JournalPaths, with_config: bool = False) -> dict:
+    paths.root.mkdir(parents=True, exist_ok=True)
+    paths.mem_dir.mkdir(parents=True, exist_ok=True)
+    created = []
+    if not paths.long.exists():
+        paths.long.write_text('# MEMORY.md\n\n', encoding='utf-8')
+        created.append(str(paths.long))
+    if with_config:
+        cfg = paths.root / 'agent-memory-journal.json'
+        if not cfg.exists():
+            cfg.write_text(json.dumps({'triggers': default_triggers()}, indent=2) + '\n', encoding='utf-8')
+            created.append(str(cfg))
+    return {'created': created, 'root': str(paths.root)}
 
 
 def extract_candidates(text: str, triggers=None):
@@ -337,11 +356,11 @@ def memory_topics(paths: JournalPaths, days: int = 14, top: int = 8, samples: in
     counts = Counter(words)
     word_samples = {}
     for note in notes:
-        low = note.lower()
+        tokens = set(tokenize(note))
         for word, count in counts.items():
             if count < min_count:
                 continue
-            if word in low:
+            if word in tokens:
                 word_samples.setdefault(word, [])
                 if len(word_samples[word]) < samples and note not in word_samples[word]:
                     word_samples[word].append(note)
@@ -449,11 +468,12 @@ def memory_candidates(paths: JournalPaths, days: int = 7, limit: int = 10, min_s
                 continue
             note = m.group(2)
             low = note.lower()
+            tokens = set(tokenize(note))
             score = 0
             triggered = [t for t in (triggers or default_triggers()) if re.search(t, low)]
             if triggered:
                 score += len(triggered)
-            if any(word in low for word in topic_words):
+            if any(word in tokens for word in topic_words):
                 score += 1
             if len(note) > 80:
                 score += 1
@@ -498,6 +518,9 @@ def build_parser():
     a.add_argument('--long', action='store_true')
     a.add_argument('--dedupe-minutes', type=int, default=0)
     a.add_argument('--no-long-dedupe', action='store_true')
+
+    i = sub.add_parser('init', help='Bootstrap a new memory root')
+    i.add_argument('--with-config', action='store_true', help='Create starter agent-memory-journal.json too')
 
     ex = sub.add_parser('extract', help='Extract likely memory-worthy lines from stdin or file')
     ex.add_argument('--file', type=Path)
@@ -556,7 +579,10 @@ def main():
     config = load_config(paths, args.config_file)
     triggers = config['triggers']
     with global_lock(paths):
-        if args.cmd == 'add':
+        if args.cmd == 'init':
+            result = init_memory_root(paths, with_config=args.with_config)
+            print(json.dumps(result, ensure_ascii=False))
+        elif args.cmd == 'add':
             added_daily = append_daily(paths, args.note, dedupe_minutes=args.dedupe_minutes)
             print('OK: note stored' if added_daily else 'SKIP_DUPLICATE: recent identical note exists')
             if args.long:

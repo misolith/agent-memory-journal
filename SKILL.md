@@ -21,40 +21,40 @@ Use the bundled CLI for durable memory operations.
 ### Add a note
 
 ```bash
-python3 agent_memory_journal.py --root /path/to/root add --note "Remember to rotate the PAT before Friday"
+agent-memory-journal --root /path/to/root add --note "Remember to rotate the PAT before Friday"
 ```
 
 Add to long-term memory too:
 
 ```bash
-python3 agent_memory_journal.py --root /path/to/root add --note "Use use the app login path for live tee-time checks" --long
+agent-memory-journal --root /path/to/root add --note "Use use the app login path for live tee-time checks" --long
 ```
 
 ### Review recent notes
 
 ```bash
-python3 agent_memory_journal.py --root /path/to/root recent --days 2
+agent-memory-journal --root /path/to/root recent --days 2
 ```
 
 ### Search memory
 
 ```bash
-python3 agent_memory_journal.py --root /path/to/root search --query "playing golf"
+agent-memory-journal --root /path/to/root search --query "playing golf"
 ```
 
 ### Find patterns
 
 ```bash
-python3 agent_memory_journal.py --root /path/to/root topics --days 14
-python3 agent_memory_journal.py --root /path/to/root cadence --days 14
-python3 agent_memory_journal.py --root /path/to/root digest --days 7
-python3 agent_memory_journal.py --root /path/to/root candidates --days 7
+agent-memory-journal --root /path/to/root topics --days 14
+agent-memory-journal --root /path/to/root cadence --days 14
+agent-memory-journal --root /path/to/root digest --days 7
+agent-memory-journal --root /path/to/root candidates --days 7
 ```
 
 ### Extract memory-worthy lines from raw text
 
 ```bash
-cat transcript.txt | python3 agent_memory_journal.py --root /path/to/root extract
+cat transcript.txt | agent-memory-journal --root /path/to/root extract
 ```
 
 ## Config
@@ -75,7 +75,7 @@ Use direct execution first. Do not assume packaging is installed.
 ### Minimal setup
 
 ```bash
-git clone <REPO_URL>
+git clone https://github.com/misolith/agent-memory-journal.git
 cd agent-memory-journal
 python3 -m venv .venv
 .venv/bin/pip install pytest
@@ -90,7 +90,7 @@ Run tests:
 Run the tool directly:
 
 ```bash
-python3 agent_memory_journal.py --root /path/to/root recent --days 2
+agent-memory-journal --root /path/to/root recent --days 2
 ```
 
 ## Notes for agents

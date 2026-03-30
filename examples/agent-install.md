@@ -10,7 +10,7 @@ cd agent-memory-journal
 python3 -m venv .venv
 .venv/bin/pip install pytest
 .venv/bin/pytest -q
-python3 agent_memory_journal.py --root /path/to/memory-root recent --days 2
+agent-memory-journal --root /path/to/memory-root recent --days 2
 ```
 
 ## Expected memory layout
@@ -27,25 +27,25 @@ python3 agent_memory_journal.py --root /path/to/memory-root recent --days 2
 Store a note:
 
 ```bash
-python3 agent_memory_journal.py --root /path/to/memory-root add --note "Remember this decision"
+agent-memory-journal --root /path/to/memory-root add --note "Remember this decision"
 ```
 
 Store a durable note:
 
 ```bash
-python3 agent_memory_journal.py --root /path/to/memory-root add --note "From now on, use the app login path" --long
+agent-memory-journal --root /path/to/memory-root add --note "From now on, use the app login path" --long
 ```
 
 Review recent notes:
 
 ```bash
-python3 agent_memory_journal.py --root /path/to/memory-root recent --days 2
+agent-memory-journal --root /path/to/memory-root recent --days 2
 ```
 
 Generate a compact review:
 
 ```bash
-python3 agent_memory_journal.py --root /path/to/memory-root digest --days 7
+agent-memory-journal --root /path/to/memory-root digest --days 7
 ```
 
 ## Configurable triggers
