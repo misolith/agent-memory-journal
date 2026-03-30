@@ -25,4 +25,4 @@ classifiers = [
 ]
 
 [project.scripts]
-memory-recall-guard = "memory_recall_guard:main"
+agent-memory-journal = "agent_memory_journal:main"
