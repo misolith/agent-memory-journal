@@ -250,8 +250,9 @@ def search_notes(paths: JournalPaths, query: str, days: int, limit: int, regex: 
 
 
 def print_search(paths: JournalPaths, **kwargs):
+    as_json = kwargs.pop('as_json', False)
     items = search_notes(paths, **kwargs)
-    if kwargs.get('as_json'):
+    if as_json:
         print(json.dumps(items, ensure_ascii=False))
         return
     if not items:
