@@ -216,3 +216,15 @@ agent-memory-journal/
 ## License
 
 MIT
+
+
+## Alpha release plan
+
+Target first public milestone: `0.1.0a1`.
+
+Release criteria:
+- standalone execution without workspace-specific paths
+- documented root/config model
+- green test suite
+- agent-facing setup instructions
+- stable CLI for add/recent/search/topics/cadence/digest/candidates

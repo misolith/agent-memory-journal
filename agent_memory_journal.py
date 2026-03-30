@@ -11,6 +11,8 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
 
+VERSION = '0.1.0a1'
+
 LINE_RE = re.compile(r"^-\s+(\d{2}:\d{2})\s+(.*)$")
 LONG_BULLET_RE = re.compile(r"^-\s+(.*)$")
 DAILY_FILE_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})\.md$")
@@ -484,6 +486,7 @@ def build_parser():
             "  agent-memory-journal --root /workspace digest --days 7"
         ),
     )
+    ap.add_argument('--version', action='version', version=f'%(prog)s {VERSION}')
     ap.add_argument('--root', type=Path, default=default_root(), help='Memory root directory (default: $AGENT_MEMORY_ROOT or current directory)')
     ap.add_argument('--memory-dir', default='memory', help='Daily memory directory relative to root (default: memory)')
     ap.add_argument('--long-file', default='MEMORY.md', help='Long-term memory filename relative to root (default: MEMORY.md)')
