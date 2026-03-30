@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0a1
+## 0.1.0
 - initialize standalone `agent-memory-journal` repository
 - rename CLI engine to `agent_memory_journal.py`
 - decouple memory root from workspace-specific hard-coded paths

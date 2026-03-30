@@ -11,7 +11,7 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
 
-VERSION = '0.1.0a1'
+VERSION = '0.1.0'
 
 LINE_RE = re.compile(r"^-\s+(\d{2}:\d{2})\s+(.*)$")
 LONG_BULLET_RE = re.compile(r"^-\s+(.*)$")

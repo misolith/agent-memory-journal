@@ -257,7 +257,7 @@ MIT
 
 ## Alpha release plan
 
-Target first public milestone: `0.1.0a1`.
+Target first public milestone: `0.1.0`.
 
 Release criteria:
 - standalone execution without workspace-specific paths
