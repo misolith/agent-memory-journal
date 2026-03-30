@@ -100,6 +100,13 @@ Current config supports:
 
 See `examples/config.example.json`.
 
+## Safety and platform notes
+
+- Prefer `--root` explicitly in automation.
+- Use a root directory you control. Do not point the tool at system directories or folders containing secrets.
+- The tool writes only under the selected root and creates `.agent_memory_journal.lock` there.
+- Current locking uses `fcntl`, so the first public release targets POSIX/Linux environments.
+
 ## Installation for agents
 
 Use direct execution first. Do not assume packaging is installed.

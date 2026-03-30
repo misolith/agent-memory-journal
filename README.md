@@ -205,6 +205,13 @@ If you want another agent to become productive from the repository URL alone, po
 
 The intended flow is: clone repo -> create venv -> run tests -> use CLI with `--root`.
 
+## Safety and platform notes
+
+- Use a memory root directory you control. Do **not** point `--root` at system directories or folders containing secrets.
+- The tool writes only under the selected root and creates `.agent_memory_journal.lock` there.
+- Current file locking uses `fcntl`, so the first public release targets POSIX/Linux environments.
+- Prefer passing `--root` explicitly in automation instead of relying on the working directory.
+
 ## Testing
 
 Run tests with:
