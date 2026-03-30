@@ -1,8 +1,10 @@
 # agent-memory-journal
 
-A lightweight, file-based memory journal for agents and operators.
+Durable episodic memory for agents — file-based, inspectable, and easy to review.
 
 `agent-memory-journal` helps keep daily notes, long-term memory, and compact review workflows in sync without requiring a database or external service. It is designed for agent setups that want durable memory with minimal moving parts.
+
+Think of it as an agent's working journal: not just a fact store, but a durable record of what happened, what mattered, and what should be remembered.
 
 ## Why this exists
 

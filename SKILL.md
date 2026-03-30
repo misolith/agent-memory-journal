@@ -1,6 +1,6 @@
 ---
 name: agent-memory-journal
-description: Durable file-based memory journaling, recall, and review for agents. Use when an agent needs to store important notes, search prior notes, prevent duplicate memory bullets, review recent activity, identify recurring topics, or suggest long-term memory candidates from daily notes. Useful for workflows involving MEMORY.md, daily journal files, lightweight memory systems, and agent continuity without a database.
+description: Durable episodic memory for agents — file-based, inspectable, and easy to review. Use when an agent needs to keep a working journal of what happened, what mattered, and what should be remembered. Use when an agent needs to store important notes, search prior notes, prevent duplicate memory bullets, review recent activity, identify recurring topics, or suggest long-term memory candidates from daily notes. Useful for workflows involving MEMORY.md, daily journal files, lightweight memory systems, and agent continuity without a database.
 ---
 
 # Agent Memory Journal
