@@ -2,11 +2,21 @@
 
 A lightweight, file-based memory journal for agents and operators.
 
-`agent-memory-journal` helps keep short-term notes, long-term memory, and compact review workflows in sync without needing a database or external service. It is designed for agent setups that want durable memory with minimal moving parts.
+`agent-memory-journal` helps keep daily notes, long-term memory, and compact review workflows in sync without requiring a database or external service. It is designed for agent setups that want durable memory with minimal moving parts.
 
-## Status
+## Why this exists
 
-This repository is the public productization track.
+Many agent workflows have the same failure mode:
+- useful facts are noticed but never written down
+- daily notes turn into noise
+- long-term memory becomes duplicated or bloated
+- recall is possible in theory but painful in practice
+
+`agent-memory-journal` is a pragmatic CLI for fixing that. It keeps memory in plain files, adds guardrails around duplication, and provides review commands that help turn recent logs into durable memory.
+
+## Current status
+
+This repository is the productization track.
 
 The internal production version still lives separately in the main OpenClaw workspace. This repo is where cleanup, parameterization, packaging, tests, and public-facing documentation happen before any internal migration.
 
@@ -19,29 +29,144 @@ The internal production version still lives separately in the main OpenClaw work
 - surface recurring topics
 - generate compact operational digests
 - suggest likely long-term memory candidates from recent daily notes
+- extract memory-worthy lines from raw text
 
-## CLI examples
+## File layout
 
-```bash
-agent-memory-journal add --note "Remember to renew the PAT before Friday"
-agent-memory-journal add --note "Use WiseGolf app path for live tee time checks" --long
-agent-memory-journal recent --days 2
-agent-memory-journal search --query "golf"
-agent-memory-journal topics --days 14
-agent-memory-journal cadence --days 14
-agent-memory-journal digest --days 7
-agent-memory-journal candidates --days 7
+By default the tool expects a memory root with this structure:
+
+```text
+<root>/
+├── MEMORY.md
+└── memory/
+    ├── 2026-03-28.md
+    ├── 2026-03-29.md
+    └── 2026-03-30.md
 ```
 
-## Current implementation notes
+### Daily note format
 
-The current script still reflects its origin as an internal workspace tool and will be refactored in-place here:
+Daily note entries are line-oriented and timestamped:
 
-- remove hard-coded workspace paths
-- support configurable memory roots
-- document expected directory layout
-- add lightweight tests for duplicate handling and summaries
-- package cleanly for standalone use
+```text
+- 08:15 Gmail watcher returned invalid_grant again.
+- 17:01 Added topics command to memory maintenance tooling.
+```
+
+### Long-term memory format
+
+`MEMORY.md` uses bullet points for durable facts, decisions, and policies:
+
+```text
+- Use WiseGolf app path for live tee-time checks.
+- Keep Gmail monitoring out of heartbeat to avoid duplicate notifications.
+```
+
+## Installation
+
+For local development:
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install pytest
+```
+
+Standalone packaging is still being refined. For now, run the script directly:
+
+```bash
+python3 agent_memory_journal.py --help
+```
+
+## CLI usage
+
+### Add a note
+
+```bash
+python3 agent_memory_journal.py --root /path/to/workspace add --note "Remember to renew the PAT before Friday"
+```
+
+### Add a note to long-term memory too
+
+```bash
+python3 agent_memory_journal.py --root /path/to/workspace add --note "Use WiseGolf app path for live tee time checks" --long
+```
+
+### Show recent notes
+
+```bash
+python3 agent_memory_journal.py --root /path/to/workspace recent --days 2
+```
+
+### Search memory
+
+```bash
+python3 agent_memory_journal.py --root /path/to/workspace search --query "wisegolf"
+```
+
+### Review recurring patterns
+
+```bash
+python3 agent_memory_journal.py --root /path/to/workspace topics --days 14
+python3 agent_memory_journal.py --root /path/to/workspace cadence --days 14
+python3 agent_memory_journal.py --root /path/to/workspace digest --days 7
+python3 agent_memory_journal.py --root /path/to/workspace candidates --days 7
+```
+
+### Extract likely memory-worthy lines from raw text
+
+```bash
+cat transcript.txt | python3 agent_memory_journal.py extract
+```
+
+## Configuration
+
+The tool resolves its root in this order:
+
+1. `--root /path/to/root`
+2. `AGENT_MEMORY_ROOT=/path/to/root`
+3. current working directory
+
+Optional path settings:
+
+- `--memory-dir memory`
+- `--long-file MEMORY.md`
+
+## Design goals
+
+- plain files, not a database
+- easy to inspect manually
+- safe against duplicate note spam
+- useful both for agents and humans
+- small enough to understand quickly
+
+## Testing
+
+Run tests with:
+
+```bash
+.venv/bin/pytest -q
+```
+
+Current coverage includes:
+- repo smoke checks
+- add + recent flow
+- long-memory dedupe
+- search flow
+- digest flow
+- temp-root execution
+
+## Roadmap
+
+Short-term:
+- improve help text and examples
+- add more focused unit tests
+- clean up output contracts
+- package for easier installation
+
+Later:
+- decide whether the CLI name and internal engine naming should fully converge
+- publish a reusable skill/package around the standalone tool
+- consider importable Python API if it stays small and coherent
 
 ## Repository layout
 
@@ -55,17 +180,8 @@ agent-memory-journal/
 ├── examples/
 │   └── quickstart.md
 └── tests/
-    └── test_smoke.py
-```
-
-## Development
-
-Create a local virtual environment and run tests:
-
-```bash
-python3 -m venv .venv
-.venv/bin/pip install pytest
-.venv/bin/pytest -q
+    ├── test_smoke.py
+    └── test_cli.py
 ```
 
 ## License
