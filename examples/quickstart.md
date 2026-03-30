@@ -9,7 +9,7 @@ memory-recall-guard add --note "Remember to renew PAT before Friday"
 ## Add a note to long-term memory too
 
 ```bash
-memory-recall-guard add --note "Use WiseGolf app path for live tee time checks" --long
+memory-recall-guard add --note "Use playing golf app path for live tee time checks" --long
 ```
 
 ## Show recent notes

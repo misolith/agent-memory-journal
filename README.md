@@ -58,7 +58,7 @@ Daily note entries are line-oriented and timestamped:
 `MEMORY.md` uses bullet points for durable facts, decisions, and policies:
 
 ```text
-- Use WiseGolf app path for live tee-time checks.
+- Use use the app login path for live tee-time checks.
 - Keep Gmail monitoring out of heartbeat to avoid duplicate notifications.
 ```
 
@@ -88,7 +88,7 @@ python3 agent_memory_journal.py --root /path/to/workspace add --note "Remember t
 ### Add a note to long-term memory too
 
 ```bash
-python3 agent_memory_journal.py --root /path/to/workspace add --note "Use WiseGolf app path for live tee time checks" --long
+python3 agent_memory_journal.py --root /path/to/workspace add --note "Use playing golf app path for live tee time checks" --long
 ```
 
 ### Show recent notes
@@ -100,7 +100,7 @@ python3 agent_memory_journal.py --root /path/to/workspace recent --days 2
 ### Search memory
 
 ```bash
-python3 agent_memory_journal.py --root /path/to/workspace search --query "wisegolf"
+python3 agent_memory_journal.py --root /path/to/workspace search --query "playing golf"
 ```
 
 ### Review recurring patterns

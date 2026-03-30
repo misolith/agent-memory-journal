@@ -27,7 +27,7 @@ python3 agent_memory_journal.py --root /path/to/root add --note "Remember to rot
 Add to long-term memory too:
 
 ```bash
-python3 agent_memory_journal.py --root /path/to/root add --note "Use WiseGolf app path for live tee-time checks" --long
+python3 agent_memory_journal.py --root /path/to/root add --note "Use use the app login path for live tee-time checks" --long
 ```
 
 ### Review recent notes
@@ -39,7 +39,7 @@ python3 agent_memory_journal.py --root /path/to/root recent --days 2
 ### Search memory
 
 ```bash
-python3 agent_memory_journal.py --root /path/to/root search --query "wisegolf"
+python3 agent_memory_journal.py --root /path/to/root search --query "playing golf"
 ```
 
 ### Find patterns
