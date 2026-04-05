@@ -112,6 +112,7 @@ python3 agent_memory_journal.py --root /path/to/workspace add --note "Use playin
 
 ```bash
 python3 agent_memory_journal.py --root /path/to/workspace recent --days 2
+python3 agent_memory_journal.py --root /path/to/workspace recent --after 2026-03-30 --before 2026-03-30
 ```
 
 ### Search memory

@@ -1,3 +1,4 @@
+from datetime import date, timedelta
 from pathlib import Path
 import subprocess
 import sys
@@ -18,10 +19,34 @@ def run_cmd(tmp_path, *args):
 def test_recent_json(tmp_path):
     memory_dir = tmp_path / 'memory'
     memory_dir.mkdir()
-    (memory_dir / '2026-03-30.md').write_text('- 12:00 hello json\n', encoding='utf-8')
+    today = date.today().isoformat()
+    (memory_dir / f'{today}.md').write_text('- 12:00 hello json\n', encoding='utf-8')
     out = run_cmd(tmp_path, 'recent', '--days', '2', '--json')
     data = json.loads(out.stdout)
     assert data[0]['note'] == 'hello json'
+
+
+def test_recent_json_date_range_filters(tmp_path):
+    memory_dir = tmp_path / 'memory'
+    memory_dir.mkdir()
+    base = date.today()
+    early = (base - timedelta(days=1)).isoformat()
+    included = base.isoformat()
+    late = (base + timedelta(days=1)).isoformat()
+    (memory_dir / f'{early}.md').write_text('- 10:00 too early\n', encoding='utf-8')
+    (memory_dir / f'{included}.md').write_text('- 12:00 included\n', encoding='utf-8')
+    (memory_dir / f'{late}.md').write_text('- 14:00 too late\n', encoding='utf-8')
+
+    out = run_cmd(
+        tmp_path,
+        'recent',
+        '--days', '10',
+        '--after', included,
+        '--before', included,
+        '--json',
+    )
+    data = json.loads(out.stdout)
+    assert [item['note'] for item in data] == ['included']
 
 
 def test_candidates_json(tmp_path):

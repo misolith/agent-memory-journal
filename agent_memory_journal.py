@@ -213,8 +213,8 @@ def parse_iso_date(value: str):
         raise argparse.ArgumentTypeError(f"Invalid date '{value}', expected YYYY-MM-DD") from exc
 
 
-def collect_recent(paths: JournalPaths, days: int, limit: int, grep: str | None):
-    files = iter_daily_files(paths, days)
+def collect_recent(paths: JournalPaths, days: int, limit: int, grep: str | None, after_date=None, before_date=None):
+    files = iter_daily_files(paths, days, after_date, before_date)
     if not files:
         return []
     pattern = re.compile(grep, re.IGNORECASE) if grep else None
@@ -238,12 +238,12 @@ def collect_recent(paths: JournalPaths, days: int, limit: int, grep: str | None)
     return out
 
 
-def print_recent(paths: JournalPaths, days: int, limit: int, grep: str | None, as_json: bool = False):
-    items = collect_recent(paths, days, limit, grep)
+def print_recent(paths: JournalPaths, days: int, limit: int, grep: str | None, as_json: bool = False, after_date=None, before_date=None):
+    items = collect_recent(paths, days, limit, grep, after_date, before_date)
     if as_json:
         print(json.dumps(items, ensure_ascii=False))
         return
-    files = iter_daily_files(paths, days)
+    files = iter_daily_files(paths, days, after_date, before_date)
     if not files:
         print('NO_MEMORY_FILES')
         return
@@ -529,6 +529,8 @@ def build_parser():
     r.add_argument('--days', type=int, default=2)
     r.add_argument('--limit', type=int, default=20)
     r.add_argument('--grep')
+    r.add_argument('--after', type=parse_iso_date)
+    r.add_argument('--before', type=parse_iso_date)
     r.add_argument('--json', action='store_true')
 
     s = sub.add_parser('search', help='Search long and daily notes for text matches')
@@ -593,7 +595,9 @@ def main():
             c = extract_candidates(text, triggers=triggers)
             print(json.dumps(c, ensure_ascii=False, indent=2))
         elif args.cmd == 'recent':
-            print_recent(paths, days=max(1, args.days), limit=max(1, args.limit), grep=args.grep, as_json=args.json)
+            if args.after and args.before and args.after > args.before:
+                raise SystemExit("Invalid date range: --after cannot be later than --before")
+            print_recent(paths, days=max(1, args.days), limit=max(1, args.limit), grep=args.grep, as_json=args.json, after_date=args.after, before_date=args.before)
         elif args.cmd == 'search':
             print_search(paths, query=args.query, days=max(1, args.days), limit=max(1, args.limit), regex=args.regex, source=args.source, after_date=args.after, before_date=args.before, as_json=args.json)
         elif args.cmd == 'stats':
