@@ -37,3 +37,20 @@ def test_recent_json_empty(tmp_path):
 def test_search_no_matches_contract(tmp_path):
     out = run_cmd(tmp_path, 'search', '--query', 'nothing')
     assert out.stdout.strip() == 'NO_MATCHES'
+
+
+def test_candidates_pending_only_filters_existing_long_memory(tmp_path):
+    run_cmd(tmp_path, 'add', '--note', 'from now on use app login for live tee times', '--long')
+    run_cmd(tmp_path, 'add', '--note', 'remember to rotate the PAT before Friday')
+
+    all_candidates = run_cmd(tmp_path, 'candidates', '--min-score', '1', '--json')
+    all_data = json.loads(all_candidates.stdout)
+    assert all_data['candidate_count'] >= 2
+    assert any(item['already_in_long_memory'] for item in all_data['candidates'])
+
+    pending = run_cmd(tmp_path, 'candidates', '--min-score', '1', '--pending-only', '--json')
+    pending_data = json.loads(pending.stdout)
+    assert pending_data['pending_only'] is True
+    assert pending_data['candidate_count'] == 1
+    assert all(not item['already_in_long_memory'] for item in pending_data['candidates'])
+    assert 'rotate the pat' in pending_data['candidates'][0]['note'].lower()

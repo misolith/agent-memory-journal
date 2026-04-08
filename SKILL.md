@@ -84,6 +84,7 @@ Example:
 ```bash
 agent-memory-journal --root /path/to/root digest --days 7
 agent-memory-journal --root /path/to/root candidates --days 7
+agent-memory-journal --root /path/to/root candidates --days 7 --pending-only --json
 agent-memory-journal --root /path/to/root add --note "From now on, use the app login path for live tee-time checks" --long
 ```
 

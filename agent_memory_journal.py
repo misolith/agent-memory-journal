@@ -454,7 +454,14 @@ def print_digest(paths: JournalPaths, days: int = 7, recent_limit: int = 5, top:
         print('recent_notes: none')
 
 
-def memory_candidates(paths: JournalPaths, days: int = 7, limit: int = 10, min_score: int = 2, triggers=None):
+def memory_candidates(
+    paths: JournalPaths,
+    days: int = 7,
+    limit: int = 10,
+    min_score: int = 2,
+    triggers=None,
+    pending_only: bool = False,
+):
     topic_words = {item['word'] for item in memory_topics(paths, days=max(1, days), top=20, samples=1, min_count=2)['topics']}
     out = []
     for p in iter_daily_files(paths, days):
@@ -462,29 +469,65 @@ def memory_candidates(paths: JournalPaths, days: int = 7, limit: int = 10, min_s
             lines = p.read_text(encoding='utf-8', errors='ignore').splitlines()
         except Exception:
             continue
-        for ln in lines:
+        for idx, ln in enumerate(lines, start=1):
             m = LINE_RE.match(ln.strip())
             if not m:
                 continue
-            note = m.group(2)
+            hhmm, note = m.group(1), m.group(2)
             low = note.lower()
             tokens = set(tokenize(note))
             score = 0
+            reasons = []
             triggered = [t for t in (triggers or default_triggers()) if re.search(t, low)]
             if triggered:
                 score += len(triggered)
-            if any(word in tokens for word in topic_words):
+                reasons.append('trigger_phrase')
+            recurring = sorted(word for word in topic_words if word in tokens)
+            if recurring:
                 score += 1
+                reasons.append(f"recurring_topic:{','.join(recurring[:3])}")
             if len(note) > 80:
                 score += 1
+                reasons.append('substantial_note')
+            already_in_long_memory = has_long_duplicate(paths, note) or has_long_duplicate(paths, f"{p.stem}: {note}")
+            if pending_only and already_in_long_memory:
+                continue
             if score >= min_score:
-                out.append({'date': p.stem, 'note': note, 'score': score})
-    out.sort(key=lambda x: (-x['score'], x['date']), reverse=False)
-    return {'days_scanned': days, 'candidates': out[: max(1, limit)]}
+                out.append({
+                    'ref': f'{p.stem}.md:{idx}',
+                    'date': p.stem,
+                    'time': hhmm,
+                    'note': note,
+                    'score': score,
+                    'reasons': reasons,
+                    'already_in_long_memory': already_in_long_memory,
+                })
+    out.sort(key=lambda x: (-x['score'], x['ref']), reverse=False)
+    return {
+        'days_scanned': days,
+        'candidate_count': len(out),
+        'pending_only': pending_only,
+        'candidates': out[: max(1, limit)],
+    }
 
 
-def print_candidates(paths: JournalPaths, days: int = 7, limit: int = 10, min_score: int = 2, as_json: bool = False, triggers=None):
-    summary = memory_candidates(paths, days=max(1, days), limit=max(1, limit), min_score=max(1, min_score), triggers=triggers)
+def print_candidates(
+    paths: JournalPaths,
+    days: int = 7,
+    limit: int = 10,
+    min_score: int = 2,
+    as_json: bool = False,
+    triggers=None,
+    pending_only: bool = False,
+):
+    summary = memory_candidates(
+        paths,
+        days=max(1, days),
+        limit=max(1, limit),
+        min_score=max(1, min_score),
+        triggers=triggers,
+        pending_only=pending_only,
+    )
     if as_json:
         print(json.dumps(summary, ensure_ascii=False))
         return
@@ -492,7 +535,10 @@ def print_candidates(paths: JournalPaths, days: int = 7, limit: int = 10, min_sc
         print('NO_CANDIDATES')
         return
     for item in summary['candidates']:
-        print(f"{item['score']} {item['date']} {item['note']}")
+        reasons = ', '.join(item['reasons']) if item['reasons'] else 'none'
+        long_flag = 'yes' if item['already_in_long_memory'] else 'no'
+        print(f"score={item['score']} {item['ref']} {item['time']} reasons={reasons} already_in_long_memory={long_flag}")
+        print(f"  {item['note']}")
 
 
 def build_parser():
@@ -570,6 +616,7 @@ def build_parser():
     cc.add_argument('--days', type=int, default=7)
     cc.add_argument('--limit', type=int, default=10)
     cc.add_argument('--min-score', type=int, default=2)
+    cc.add_argument('--pending-only', action='store_true', help='Only show candidates not already present in long-term memory')
     cc.add_argument('--json', action='store_true')
     return ap
 
@@ -609,7 +656,15 @@ def main():
         elif args.cmd == 'digest':
             print_digest(paths, days=max(1, args.days), recent_limit=max(1, args.recent_limit), top=max(1, args.top), as_json=args.json)
         elif args.cmd == 'candidates':
-            print_candidates(paths, days=max(1, args.days), limit=max(1, args.limit), min_score=max(1, args.min_score), as_json=args.json, triggers=triggers)
+            print_candidates(
+                paths,
+                days=max(1, args.days),
+                limit=max(1, args.limit),
+                min_score=max(1, args.min_score),
+                as_json=args.json,
+                triggers=triggers,
+                pending_only=args.pending_only,
+            )
 
 
 if __name__ == '__main__':

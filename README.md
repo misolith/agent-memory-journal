@@ -31,6 +31,7 @@ The internal production version still lives separately in the main OpenClaw work
 - surface recurring topics
 - generate compact operational digests
 - suggest likely long-term memory candidates from recent daily notes
+- flag candidates already present in long-term memory and filter to pending-only review
 - extract memory-worthy lines from raw text
 
 ## File layout
@@ -128,6 +129,7 @@ python3 agent_memory_journal.py --root /path/to/workspace topics --days 14
 python3 agent_memory_journal.py --root /path/to/workspace cadence --days 14
 python3 agent_memory_journal.py --root /path/to/workspace digest --days 7
 python3 agent_memory_journal.py --root /path/to/workspace candidates --days 7
+python3 agent_memory_journal.py --root /path/to/workspace candidates --days 7 --pending-only --json
 ```
 
 ### Extract likely memory-worthy lines from raw text

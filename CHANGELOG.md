@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- add `candidates --pending-only` so promotion review can ignore notes already present in `MEMORY.md`
+- enrich candidate output with stable refs, timestamps, heuristic reasons, and `already_in_long_memory` metadata
+- cover pending-only candidate filtering in contract tests
 - add `recent --after/--before` date filters so note review can target exact daily windows without grep hacks
 - validate `recent` date ranges consistently with `search`
 - cover recent date-range filtering in JSON CLI tests
