@@ -541,6 +541,118 @@ def print_candidates(
         print(f"  {item['note']}")
 
 
+def related_long_matches(paths: JournalPaths, note: str, limit: int = 3) -> list[dict[str, object]]:
+    if not paths.long.exists():
+        return []
+
+    note_tokens = set(tokenize(note))
+    if not note_tokens:
+        return []
+
+    try:
+        lines = paths.long.read_text(encoding='utf-8', errors='ignore').splitlines()
+    except Exception:
+        return []
+
+    matches = []
+    for i, ln in enumerate(lines, 1):
+        m = LONG_BULLET_RE.match(ln.strip())
+        if not m:
+            continue
+        long_note = m.group(1)
+        overlap = sorted(note_tokens & set(tokenize(long_note)))
+        if not overlap:
+            continue
+        matches.append({
+            'ref': f'{paths.long.name}:{i}',
+            'note': long_note,
+            'overlap_count': len(overlap),
+            'overlap_tokens': overlap[:5],
+        })
+
+    matches.sort(key=lambda item: (-int(item['overlap_count']), item['ref']))
+    return matches[: max(1, limit)]
+
+
+def memory_review(
+    paths: JournalPaths,
+    days: int = 7,
+    limit: int = 10,
+    min_score: int = 2,
+    triggers=None,
+    pending_only: bool = False,
+    related_limit: int = 3,
+) -> dict:
+    summary = memory_candidates(
+        paths,
+        days=max(1, days),
+        limit=max(1, limit),
+        min_score=max(1, min_score),
+        triggers=triggers,
+        pending_only=pending_only,
+    )
+    reviewed = []
+    for item in summary['candidates']:
+        reviewed.append({
+            **item,
+            'promote_command': f"{Path(__file__).name} --root {paths.root} promote --ref {item['ref']} --prefix-date",
+            'related_long_matches': related_long_matches(paths, item['note'], limit=max(1, related_limit)),
+        })
+
+    return {
+        'days_scanned': summary['days_scanned'],
+        'candidate_count': summary['candidate_count'],
+        'pending_only': summary['pending_only'],
+        'related_limit': max(1, related_limit),
+        'candidates': reviewed,
+    }
+
+
+def print_review(
+    paths: JournalPaths,
+    days: int = 7,
+    limit: int = 10,
+    min_score: int = 2,
+    as_json: bool = False,
+    triggers=None,
+    pending_only: bool = False,
+    related_limit: int = 3,
+):
+    summary = memory_review(
+        paths,
+        days=max(1, days),
+        limit=max(1, limit),
+        min_score=max(1, min_score),
+        triggers=triggers,
+        pending_only=pending_only,
+        related_limit=max(1, related_limit),
+    )
+    if as_json:
+        print(json.dumps(summary, ensure_ascii=False))
+        return
+    print(
+        f"days_scanned={summary['days_scanned']} candidate_count={summary['candidate_count']} "
+        f"pending_only={'yes' if summary['pending_only'] else 'no'} related_limit={summary['related_limit']}"
+    )
+    if not summary['candidates']:
+        print('NO_CANDIDATES')
+        return
+    for item in summary['candidates']:
+        reasons = ', '.join(item['reasons']) if item['reasons'] else 'none'
+        long_flag = 'yes' if item['already_in_long_memory'] else 'no'
+        print(f"score={item['score']} {item['ref']} {item['time']} reasons={reasons} already_in_long_memory={long_flag}")
+        print(f"  note: {item['note']}")
+        print(f"  promote: {item['promote_command']}")
+        if item['related_long_matches']:
+            print('  related_long_matches:')
+            for match in item['related_long_matches']:
+                overlap = ', '.join(match['overlap_tokens']) if match['overlap_tokens'] else 'none'
+                print(f"    - {match['ref']} overlap={match['overlap_count']} tokens={overlap}")
+                print(f"      {match['note']}")
+        else:
+            print('  related_long_matches: none')
+
+
 def build_parser():
     ap = argparse.ArgumentParser(
         description='Durable memory journal for agents and operators',
@@ -618,6 +730,14 @@ def build_parser():
     cc.add_argument('--min-score', type=int, default=2)
     cc.add_argument('--pending-only', action='store_true', help='Only show candidates not already present in long-term memory')
     cc.add_argument('--json', action='store_true')
+
+    rv = sub.add_parser('review', help='Review candidate notes with related long-memory matches and promote commands')
+    rv.add_argument('--days', type=int, default=7)
+    rv.add_argument('--limit', type=int, default=10)
+    rv.add_argument('--min-score', type=int, default=2)
+    rv.add_argument('--pending-only', action='store_true')
+    rv.add_argument('--related-limit', type=int, default=3)
+    rv.add_argument('--json', action='store_true')
     return ap
 
 
@@ -664,6 +784,17 @@ def main():
                 as_json=args.json,
                 triggers=triggers,
                 pending_only=args.pending_only,
+            )
+        elif args.cmd == 'review':
+            print_review(
+                paths,
+                days=max(1, args.days),
+                limit=max(1, args.limit),
+                min_score=max(1, args.min_score),
+                as_json=args.json,
+                triggers=triggers,
+                pending_only=args.pending_only,
+                related_limit=max(1, args.related_limit),
             )
 
 

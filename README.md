@@ -31,6 +31,7 @@ The internal production version still lives separately in the main OpenClaw work
 - surface recurring topics
 - generate compact operational digests
 - suggest likely long-term memory candidates from recent daily notes
+- review candidates with related long-memory matches and copyable promotion commands
 - flag candidates already present in long-term memory and filter to pending-only review
 - extract memory-worthy lines from raw text
 

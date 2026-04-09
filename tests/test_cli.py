@@ -34,3 +34,11 @@ def test_search_and_digest(tmp_path):
     assert 'wisegolf' in search.stdout.lower()
     digest = run_cmd(tmp_path, 'digest', '--days', '7')
     assert 'recent_notes:' in digest.stdout
+
+
+def test_review_shows_related_long_memory(tmp_path):
+    run_cmd(tmp_path, 'add', '--note', 'memory recall guard now supports review mode for candidate promotion', '--long')
+    run_cmd(tmp_path, 'add', '--note', 'memory recall guard now supports review mode for candidate promotion with promote commands')
+    out = run_cmd(tmp_path, 'review', '--days', '2', '--limit', '5', '--min-score', '2')
+    assert 'related_long_matches:' in out.stdout
+    assert 'promote:' in out.stdout

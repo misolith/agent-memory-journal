@@ -1,3 +1,6 @@
+
+## Unreleased
+- added a `review` command that shows candidate notes alongside related `MEMORY.md` bullets and copyable promotion commands
 # Changelog
 
 ## Unreleased
