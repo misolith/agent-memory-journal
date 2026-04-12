@@ -42,3 +42,6 @@ def test_review_shows_related_long_memory(tmp_path):
     out = run_cmd(tmp_path, 'review', '--days', '2', '--limit', '5', '--min-score', '2')
     assert 'related_long_matches:' in out.stdout
     assert 'promote:' in out.stdout
+    assert 'reason_counts:' in out.stdout
+    assert 'batch_promote:' in out.stdout
+    assert 'promote-candidates' in out.stdout

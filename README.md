@@ -131,7 +131,10 @@ python3 agent_memory_journal.py --root /path/to/workspace cadence --days 14
 python3 agent_memory_journal.py --root /path/to/workspace digest --days 7
 python3 agent_memory_journal.py --root /path/to/workspace candidates --days 7
 python3 agent_memory_journal.py --root /path/to/workspace candidates --days 7 --pending-only --json
+python3 agent_memory_journal.py --root /path/to/workspace review --days 7 --pending-only
 ```
+
+`review` now emits an aggregate `reason_counts` summary and a ready-to-run `batch_promote` command when there are pending candidates, so operators can move from inspection to promotion without rebuilding the selection manually.
 
 ### Extract likely memory-worthy lines from raw text
 
@@ -175,7 +178,7 @@ The repository includes a starter file at `examples/config.example.json`.
 
 Stable for the alpha line:
 - file layout: `<root>/MEMORY.md` and `<root>/memory/YYYY-MM-DD.md`
-- commands: `add`, `extract`, `recent`, `search`, `stats`, `topics`, `cadence`, `digest`, `candidates`
+- commands: `add`, `extract`, `recent`, `search`, `stats`, `topics`, `cadence`, `digest`, `candidates`, `review`, `promote`, `promote-candidates`
 - `--root`, `--config-file`, `--json`, and `--version`
 - sentinel outputs such as `NO_MATCHES` and `NO_CANDIDATES`
 
@@ -187,6 +190,7 @@ Intended for automation:
 - `cadence --json`
 - `digest --json`
 - `candidates --json`
+- `review --json`
 
 Platform note:
 - current locking uses `fcntl`, so the alpha target is POSIX/Linux environments
@@ -275,4 +279,4 @@ Release criteria:
 - documented root/config model
 - green test suite
 - agent-facing setup instructions
-- stable CLI for add/recent/search/topics/cadence/digest/candidates
+- stable CLI for add/recent/search/topics/cadence/digest/candidates/review/promote/promote-candidates

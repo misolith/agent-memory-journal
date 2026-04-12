@@ -592,18 +592,35 @@ def memory_review(
         pending_only=pending_only,
     )
     reviewed = []
+    reason_counts = Counter()
+    batch_refs = []
+
     for item in summary['candidates']:
+        reason_counts.update(item.get('reasons', []))
+        if not item.get('already_in_long_memory'):
+            batch_refs.append(item['ref'])
+
         reviewed.append({
             **item,
             'promote_command': f"{Path(__file__).name} --root {paths.root} promote --ref {item['ref']} --prefix-date",
             'related_long_matches': related_long_matches(paths, item['note'], limit=max(1, related_limit)),
         })
 
+    batch_promote_command = None
+    if batch_refs:
+        batch_promote_command = (
+            f"{Path(__file__).name} --root {paths.root} promote-candidates "
+            f"--days {max(1, days)} --limit {max(1, limit)} --min-score {max(1, min_score)} --prefix-date"
+        )
+
     return {
         'days_scanned': summary['days_scanned'],
         'candidate_count': summary['candidate_count'],
         'pending_only': summary['pending_only'],
         'related_limit': max(1, related_limit),
+        'reason_counts': dict(sorted(reason_counts.items(), key=lambda kv: (-kv[1], kv[0]))),
+        'batch_ref_count': len(batch_refs),
+        'batch_promote_command': batch_promote_command,
         'candidates': reviewed,
     }
 
@@ -632,8 +649,20 @@ def print_review(
         return
     print(
         f"days_scanned={summary['days_scanned']} candidate_count={summary['candidate_count']} "
-        f"pending_only={'yes' if summary['pending_only'] else 'no'} related_limit={summary['related_limit']}"
+        f"pending_only={'yes' if summary['pending_only'] else 'no'} related_limit={summary['related_limit']} "
+        f"batch_ref_count={summary['batch_ref_count']}"
     )
+    if summary['reason_counts']:
+        reasons = ', '.join(f"{reason}({count})" for reason, count in summary['reason_counts'].items())
+        print(f"reason_counts: {reasons}")
+    else:
+        print('reason_counts: none')
+
+    if summary['batch_promote_command']:
+        print(f"batch_promote: {summary['batch_promote_command']}")
+    else:
+        print('batch_promote: none')
+
     if not summary['candidates']:
         print('NO_CANDIDATES')
         return
