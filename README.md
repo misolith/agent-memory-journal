@@ -132,6 +132,8 @@ python3 agent_memory_journal.py --root /path/to/workspace digest --days 7
 python3 agent_memory_journal.py --root /path/to/workspace candidates --days 7
 python3 agent_memory_journal.py --root /path/to/workspace candidates --days 7 --pending-only --json
 python3 agent_memory_journal.py --root /path/to/workspace review --days 7 --pending-only
+python3 agent_memory_journal.py --root /path/to/workspace promote --ref 2026-03-30.md:12 --prefix-date
+python3 agent_memory_journal.py --root /path/to/workspace promote-candidates --days 7 --prefix-date
 ```
 
 `review` now emits an aggregate `reason_counts` summary and a ready-to-run `batch_promote` command when there are pending candidates, so operators can move from inspection to promotion without rebuilding the selection manually.

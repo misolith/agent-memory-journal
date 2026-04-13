@@ -54,3 +54,25 @@ def test_candidates_json(tmp_path):
     out = run_cmd(tmp_path, 'candidates', '--days', '7', '--json')
     data = json.loads(out.stdout)
     assert 'candidates' in data
+
+
+def test_promote_command_by_ref(tmp_path):
+    memory_dir = tmp_path / 'memory'
+    memory_dir.mkdir()
+    today = date.today().isoformat()
+    (memory_dir / f'{today}.md').write_text('- 12:00 durable note\n', encoding='utf-8')
+
+    out = run_cmd(tmp_path, 'promote', '--ref', f'{today}.md:1', '--prefix-date')
+    assert 'LONG_OK' in out.stdout
+
+    long_text = (tmp_path / 'MEMORY.md').read_text(encoding='utf-8')
+    assert f'- {today}: durable note' in long_text
+
+
+def test_promote_candidates_json_dry_run(tmp_path):
+    run_cmd(tmp_path, 'add', '--note', 'remember from now on route degraded workflows with evidence receipts')
+    out = run_cmd(tmp_path, 'promote-candidates', '--days', '7', '--dry-run', '--json')
+    data = json.loads(out.stdout)
+    assert data['requested'] == 1
+    assert data['added'] == 0
+    assert data['results'][0]['status'] == 'DRY_RUN'

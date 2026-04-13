@@ -11,11 +11,12 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
 
-VERSION = '0.1.0'
+VERSION = '0.1.1'
 
 LINE_RE = re.compile(r"^-\s+(\d{2}:\d{2})\s+(.*)$")
 LONG_BULLET_RE = re.compile(r"^-\s+(.*)$")
 DAILY_FILE_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})\.md$")
+DAILY_REF_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})\.md:(\d+)$")
 
 
 class JournalPaths:
@@ -156,6 +157,96 @@ def append_long(paths: JournalPaths, note: str, dedupe: bool = True) -> bool:
     with paths.long.open('a', encoding='utf-8') as f:
         f.write(f"\n- {note.strip()}\n")
     return True
+
+
+def resolve_daily_ref(paths: JournalPaths, ref: str) -> dict[str, str]:
+    m = DAILY_REF_RE.match(ref.strip())
+    if not m:
+        raise ValueError(f"Invalid daily ref '{ref}', expected YYYY-MM-DD.md:LINE")
+
+    date_str, line_str = m.group(1), m.group(2)
+    path = paths.mem_dir / f'{date_str}.md'
+    if not path.exists():
+        raise ValueError(f"Daily memory file not found for ref '{ref}'")
+
+    try:
+        line_no = int(line_str)
+    except ValueError as exc:
+        raise ValueError(f"Invalid line number in ref '{ref}'") from exc
+
+    try:
+        lines = path.read_text(encoding='utf-8', errors='ignore').splitlines()
+    except Exception as exc:
+        raise ValueError(f"Could not read daily memory file for ref '{ref}'") from exc
+
+    if line_no < 1 or line_no > len(lines):
+        raise ValueError(f"Ref '{ref}' points outside file bounds")
+
+    raw = lines[line_no - 1].strip()
+    m_line = LINE_RE.match(raw)
+    if not m_line:
+        raise ValueError(f"Ref '{ref}' does not point to a timestamped note line")
+
+    hhmm, note = m_line.group(1), m_line.group(2)
+    return {'date': date_str, 'time': hhmm, 'note': note, 'ref': ref}
+
+
+def promote_daily_ref(paths: JournalPaths, ref: str, prefix_date: bool = False, long_dedupe: bool = True) -> tuple[bool, str]:
+    item = resolve_daily_ref(paths, ref)
+    note = item['note']
+    if prefix_date:
+        note = f"{item['date']}: {note}"
+
+    with global_lock(paths):
+        added = append_long(paths, note, dedupe=long_dedupe)
+
+    return added, note
+
+
+def promote_candidate_refs(
+    paths: JournalPaths,
+    refs: list[str],
+    prefix_date: bool = False,
+    long_dedupe: bool = True,
+    dry_run: bool = False,
+) -> dict[str, object]:
+    results: list[dict[str, object]] = []
+    notes_to_write: list[str] = []
+    seen_notes: set[str] = set()
+
+    for ref in refs:
+        item = resolve_daily_ref(paths, ref)
+        note = item['note']
+        if prefix_date:
+            note = f"{item['date']}: {note}"
+
+        normalized = normalize_note(note)
+        already_present = (has_long_duplicate(paths, note) or normalized in seen_notes) if long_dedupe else False
+        status = 'DRY_RUN' if dry_run else ('LONG_SKIP_DUPLICATE' if already_present else 'LONG_OK')
+        results.append({
+            'ref': ref,
+            'note': note,
+            'added': status == 'LONG_OK',
+            'status': status,
+        })
+
+        if dry_run or already_present:
+            continue
+
+        notes_to_write.append(note)
+        seen_notes.add(normalized)
+
+    if notes_to_write:
+        with global_lock(paths):
+            for note in notes_to_write:
+                append_long(paths, note, dedupe=False)
+
+    return {
+        'requested': len(refs),
+        'added': sum(1 for item in results if item['added']),
+        'skipped': sum(1 for item in results if item['status'] != 'LONG_OK'),
+        'results': results,
+    }
 
 
 def init_memory_root(paths: JournalPaths, with_config: bool = False) -> dict:
@@ -351,7 +442,7 @@ def memory_stats(paths: JournalPaths, days: int = 7, top: int = 10):
     }
 
 
-def memory_topics(paths: JournalPaths, days: int = 14, top: int = 8, samples: int = 2, min_count: int = 2):
+def memory_topics(paths: JournalPaths, days: int = 14, top: int = 8, samples: int = 2, min_count: int = 2, after_date=None, before_date=None):
     notes, words = _note_words(paths, days)
     counts = Counter(words)
     word_samples = {}
@@ -397,7 +488,7 @@ def print_topics(paths: JournalPaths, days: int = 14, top: int = 8, samples: int
 
 
 def memory_cadence(paths: JournalPaths, days: int = 14, top_hours: int = 3):
-    files = iter_daily_files(paths, days)
+    files = iter_daily_files(paths, days, after_date=after_date, before_date=before_date)
     per_day = []
     hourly = Counter()
     for p in files:
@@ -461,10 +552,15 @@ def memory_candidates(
     min_score: int = 2,
     triggers=None,
     pending_only: bool = False,
+    after_date=None,
+    before_date=None,
 ):
-    topic_words = {item['word'] for item in memory_topics(paths, days=max(1, days), top=20, samples=1, min_count=2)['topics']}
+    topic_words = {
+        item['word']
+        for item in memory_topics(paths, days=max(1, days), top=20, samples=1, min_count=2, after_date=after_date, before_date=before_date)['topics']
+    }
     out = []
-    for p in iter_daily_files(paths, days):
+    for p in iter_daily_files(paths, days, after_date=after_date, before_date=before_date):
         try:
             lines = p.read_text(encoding='utf-8', errors='ignore').splitlines()
         except Exception:
@@ -519,6 +615,8 @@ def print_candidates(
     as_json: bool = False,
     triggers=None,
     pending_only: bool = False,
+    after_date=None,
+    before_date=None,
 ):
     summary = memory_candidates(
         paths,
@@ -527,6 +625,8 @@ def print_candidates(
         min_score=max(1, min_score),
         triggers=triggers,
         pending_only=pending_only,
+        after_date=after_date,
+        before_date=before_date,
     )
     if as_json:
         print(json.dumps(summary, ensure_ascii=False))
@@ -682,6 +782,58 @@ def print_review(
             print('  related_long_matches: none')
 
 
+def print_promote_candidates(
+    paths: JournalPaths,
+    days: int = 7,
+    limit: int = 10,
+    min_score: int = 2,
+    prefix_date: bool = False,
+    long_dedupe: bool = True,
+    dry_run: bool = False,
+    as_json: bool = False,
+    triggers=None,
+    after_date: datetime.date | None = None,
+    before_date: datetime.date | None = None,
+):
+    candidates = memory_candidates(
+        paths,
+        days=max(1, days),
+        limit=max(1, limit),
+        min_score=max(1, min_score),
+        triggers=triggers,
+        pending_only=True,
+        after_date=after_date,
+        before_date=before_date,
+    )
+    refs = [item['ref'] for item in candidates['candidates'] if not item.get('already_in_long_memory')]
+    summary = promote_candidate_refs(
+        paths,
+        refs=refs,
+        prefix_date=prefix_date,
+        long_dedupe=long_dedupe,
+        dry_run=dry_run,
+    )
+    summary.update({
+        'days_scanned': candidates['days_scanned'],
+        'candidate_count': candidates['candidate_count'],
+    })
+
+    if as_json:
+        print(json.dumps(summary, ensure_ascii=False))
+        return
+
+    print(
+        f"days_scanned={summary['days_scanned']} candidate_count={summary['candidate_count']} "
+        f"requested={summary['requested']} added={summary['added']} skipped={summary['skipped']}"
+    )
+    if not summary['results']:
+        print('NO_PROMOTION_TARGETS')
+        return
+
+    for item in summary['results']:
+        print(f"{item['status']} {item['ref']} {item['note']}")
+
+
 def build_parser():
     ap = argparse.ArgumentParser(
         description='Durable memory journal for agents and operators',
@@ -694,7 +846,7 @@ def build_parser():
         ),
     )
     ap.add_argument('--version', action='version', version=f'%(prog)s {VERSION}')
-    ap.add_argument('--root', type=Path, default=default_root(), help='Memory root directory (default: $AGENT_MEMORY_ROOT or current directory)')
+    ap.add_argument('--root', type=Path, default=default_root(), help='Memory root directory (default: AGENT_MEMORY_ROOT env or current directory)')
     ap.add_argument('--memory-dir', default='memory', help='Daily memory directory relative to root (default: memory)')
     ap.add_argument('--long-file', default='MEMORY.md', help='Long-term memory filename relative to root (default: MEMORY.md)')
     ap.add_argument('--config-file', help='Optional JSON config path relative to root or absolute')
@@ -767,6 +919,22 @@ def build_parser():
     rv.add_argument('--pending-only', action='store_true')
     rv.add_argument('--related-limit', type=int, default=3)
     rv.add_argument('--json', action='store_true')
+
+    pr = sub.add_parser('promote', help='Promote a timestamped daily memory note into MEMORY.md by ref')
+    pr.add_argument('--ref', required=True, help='Daily note ref in the form YYYY-MM-DD.md:LINE')
+    pr.add_argument('--prefix-date', action='store_true', help='Prefix the promoted note with its source date')
+    pr.add_argument('--long-dedupe', action=argparse.BooleanOptionalAction, default=True, help='Skip appending when an equivalent MEMORY.md bullet already exists (default: true)')
+
+    pc = sub.add_parser('promote-candidates', help='Promote recent high-signal daily notes into MEMORY.md in one pass')
+    pc.add_argument('--days', type=int, default=7)
+    pc.add_argument('--limit', type=int, default=10)
+    pc.add_argument('--min-score', type=int, default=2)
+    pc.add_argument('--after', type=parse_iso_date)
+    pc.add_argument('--before', type=parse_iso_date)
+    pc.add_argument('--prefix-date', action='store_true')
+    pc.add_argument('--long-dedupe', action=argparse.BooleanOptionalAction, default=True, help='Skip appending when an equivalent MEMORY.md bullet already exists (default: true)')
+    pc.add_argument('--dry-run', action='store_true', help='Preview promotions without writing to MEMORY.md')
+    pc.add_argument('--json', action='store_true')
     return ap
 
 
@@ -776,55 +944,83 @@ def main():
     paths = JournalPaths(args.root.expanduser().resolve(), args.memory_dir, args.long_file)
     config = load_config(paths, args.config_file)
     triggers = config['triggers']
-    with global_lock(paths):
-        if args.cmd == 'init':
+    if args.cmd == 'init':
+        with global_lock(paths):
             result = init_memory_root(paths, with_config=args.with_config)
-            print(json.dumps(result, ensure_ascii=False))
-        elif args.cmd == 'add':
+        print(json.dumps(result, ensure_ascii=False))
+    elif args.cmd == 'add':
+        with global_lock(paths):
             added_daily = append_daily(paths, args.note, dedupe_minutes=args.dedupe_minutes)
             print('OK: note stored' if added_daily else 'SKIP_DUPLICATE: recent identical note exists')
             if args.long:
                 added_long = append_long(paths, args.note, dedupe=not args.no_long_dedupe)
                 print('LONG_OK' if added_long else 'LONG_SKIP_DUPLICATE')
-        elif args.cmd == 'extract':
-            text = args.file.read_text(encoding='utf-8') if args.file else __import__('sys').stdin.read()
-            c = extract_candidates(text, triggers=triggers)
-            print(json.dumps(c, ensure_ascii=False, indent=2))
-        elif args.cmd == 'recent':
-            if args.after and args.before and args.after > args.before:
-                raise SystemExit("Invalid date range: --after cannot be later than --before")
-            print_recent(paths, days=max(1, args.days), limit=max(1, args.limit), grep=args.grep, as_json=args.json, after_date=args.after, before_date=args.before)
-        elif args.cmd == 'search':
-            print_search(paths, query=args.query, days=max(1, args.days), limit=max(1, args.limit), regex=args.regex, source=args.source, after_date=args.after, before_date=args.before, as_json=args.json)
-        elif args.cmd == 'stats':
-            print_stats(paths, days=max(1, args.days), top=max(1, args.top), as_json=args.json)
-        elif args.cmd == 'topics':
-            print_topics(paths, days=max(1, args.days), top=max(1, args.top), samples=max(1, args.samples), min_count=max(1, args.min_count), as_json=args.json)
-        elif args.cmd == 'cadence':
-            print_cadence(paths, days=max(1, args.days), top_hours=max(1, args.top_hours), as_json=args.json)
-        elif args.cmd == 'digest':
-            print_digest(paths, days=max(1, args.days), recent_limit=max(1, args.recent_limit), top=max(1, args.top), as_json=args.json)
-        elif args.cmd == 'candidates':
-            print_candidates(
+    elif args.cmd == 'extract':
+        text = args.file.read_text(encoding='utf-8') if args.file else __import__('sys').stdin.read()
+        c = extract_candidates(text, triggers=triggers)
+        print(json.dumps(c, ensure_ascii=False, indent=2))
+    elif args.cmd == 'recent':
+        if args.after and args.before and args.after > args.before:
+            raise SystemExit("Invalid date range: --after cannot be later than --before")
+        print_recent(paths, days=max(1, args.days), limit=max(1, args.limit), grep=args.grep, as_json=args.json, after_date=args.after, before_date=args.before)
+    elif args.cmd == 'search':
+        print_search(paths, query=args.query, days=max(1, args.days), limit=max(1, args.limit), regex=args.regex, source=args.source, after_date=args.after, before_date=args.before, as_json=args.json)
+    elif args.cmd == 'stats':
+        print_stats(paths, days=max(1, args.days), top=max(1, args.top), as_json=args.json)
+    elif args.cmd == 'topics':
+        print_topics(paths, days=max(1, args.days), top=max(1, args.top), samples=max(1, args.samples), min_count=max(1, args.min_count), as_json=args.json)
+    elif args.cmd == 'cadence':
+        print_cadence(paths, days=max(1, args.days), top_hours=max(1, args.top_hours), as_json=args.json)
+    elif args.cmd == 'digest':
+        print_digest(paths, days=max(1, args.days), recent_limit=max(1, args.recent_limit), top=max(1, args.top), as_json=args.json)
+    elif args.cmd == 'candidates':
+        print_candidates(
+            paths,
+            days=max(1, args.days),
+            limit=max(1, args.limit),
+            min_score=max(1, args.min_score),
+            as_json=args.json,
+            triggers=triggers,
+            pending_only=args.pending_only,
+        )
+    elif args.cmd == 'review':
+        print_review(
+            paths,
+            days=max(1, args.days),
+            limit=max(1, args.limit),
+            min_score=max(1, args.min_score),
+            as_json=args.json,
+            triggers=triggers,
+            pending_only=args.pending_only,
+            related_limit=max(1, args.related_limit),
+        )
+    elif args.cmd == 'promote':
+        try:
+            added, note = promote_daily_ref(
                 paths,
-                days=max(1, args.days),
-                limit=max(1, args.limit),
-                min_score=max(1, args.min_score),
-                as_json=args.json,
-                triggers=triggers,
-                pending_only=args.pending_only,
+                ref=args.ref,
+                prefix_date=args.prefix_date,
+                long_dedupe=args.long_dedupe,
             )
-        elif args.cmd == 'review':
-            print_review(
-                paths,
-                days=max(1, args.days),
-                limit=max(1, args.limit),
-                min_score=max(1, args.min_score),
-                as_json=args.json,
-                triggers=triggers,
-                pending_only=args.pending_only,
-                related_limit=max(1, args.related_limit),
-            )
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from exc
+        print(f"LONG_OK {note}" if added else f"LONG_SKIP_DUPLICATE {note}")
+    elif args.cmd == 'promote-candidates':
+        if args.after and args.before and args.after > args.before:
+            raise SystemExit("Invalid date range: --after cannot be later than --before")
+        print_promote_candidates(
+            paths,
+            days=max(1, args.days),
+            limit=max(1, args.limit),
+            min_score=max(1, args.min_score),
+            prefix_date=args.prefix_date,
+            long_dedupe=args.long_dedupe,
+            dry_run=args.dry_run,
+            as_json=args.json,
+            triggers=triggers,
+            after_date=args.after,
+            before_date=args.before,
+        )
 
 
 if __name__ == '__main__':
