@@ -54,3 +54,27 @@ def test_candidates_pending_only_filters_existing_long_memory(tmp_path):
     assert pending_data['candidate_count'] == 1
     assert all(not item['already_in_long_memory'] for item in pending_data['candidates'])
     assert 'rotate the pat' in pending_data['candidates'][0]['note'].lower()
+
+
+def test_review_context_lines_show_neighboring_source(tmp_path):
+    daily = tmp_path / 'memory' / '2026-04-14.md'
+    daily.parent.mkdir(parents=True, exist_ok=True)
+    daily.write_text(
+        '\n'.join([
+            '# 2026-04-14',
+            '',
+            '- 09:00 warmup note',
+            '- 09:10 remember this durable routing change',
+            '- 09:20 cooldown note',
+        ]) + '\n',
+        encoding='utf-8',
+    )
+
+    out = run_cmd(tmp_path, 'review', '--days', '2', '--min-score', '1', '--context-lines', '1', '--json')
+    data = json.loads(out.stdout)
+
+    assert data['context_lines'] == 1
+    candidate = next(item for item in data['candidates'] if 'durable routing change' in item['note'])
+    context = candidate['source_context']
+    assert any(item['is_target'] and 'remember this durable routing change' in item['text'] for item in context)
+    assert any((not item['is_target']) and 'cooldown note' in item['text'] for item in context)

@@ -4,6 +4,7 @@
 # Changelog
 
 ## Unreleased
+- add `review --context-lines` so candidate review can include neighboring source lines before promotion
 - add `promote` and `promote-candidates` to the public CLI so the packaged tool matches the documented alpha contract and internal production workflow
 - add `candidates --pending-only` so promotion review can ignore notes already present in `MEMORY.md`
 - enrich candidate output with stable refs, timestamps, heuristic reasons, and `already_in_long_memory` metadata

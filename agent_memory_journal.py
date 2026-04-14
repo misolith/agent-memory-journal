@@ -188,7 +188,26 @@ def resolve_daily_ref(paths: JournalPaths, ref: str) -> dict[str, str]:
         raise ValueError(f"Ref '{ref}' does not point to a timestamped note line")
 
     hhmm, note = m_line.group(1), m_line.group(2)
-    return {'date': date_str, 'time': hhmm, 'note': note, 'ref': ref}
+    return {'date': date_str, 'time': hhmm, 'note': note, 'ref': ref, 'line_no': line_no, 'path': str(path)}
+
+
+def daily_ref_context(paths: JournalPaths, ref: str, context_lines: int = 1) -> list[dict[str, object]]:
+    item = resolve_daily_ref(paths, ref)
+    if context_lines <= 0:
+        return []
+
+    path = Path(item['path'])
+    lines = path.read_text(encoding='utf-8', errors='ignore').splitlines()
+    start = max(1, item['line_no'] - context_lines)
+    end = min(len(lines), item['line_no'] + context_lines)
+    excerpt: list[dict[str, object]] = []
+    for idx in range(start, end + 1):
+        excerpt.append({
+            'line_no': idx,
+            'text': lines[idx - 1],
+            'is_target': idx == item['line_no'],
+        })
+    return excerpt
 
 
 def promote_daily_ref(paths: JournalPaths, ref: str, prefix_date: bool = False, long_dedupe: bool = True) -> tuple[bool, str]:
@@ -682,6 +701,7 @@ def memory_review(
     triggers=None,
     pending_only: bool = False,
     related_limit: int = 3,
+    context_lines: int = 0,
 ) -> dict:
     summary = memory_candidates(
         paths,
@@ -704,6 +724,7 @@ def memory_review(
             **item,
             'promote_command': f"{Path(__file__).name} --root {paths.root} promote --ref {item['ref']} --prefix-date",
             'related_long_matches': related_long_matches(paths, item['note'], limit=max(1, related_limit)),
+            'source_context': daily_ref_context(paths, item['ref'], context_lines=max(0, context_lines)),
         })
 
     batch_promote_command = None
@@ -718,6 +739,7 @@ def memory_review(
         'candidate_count': summary['candidate_count'],
         'pending_only': summary['pending_only'],
         'related_limit': max(1, related_limit),
+        'context_lines': max(0, context_lines),
         'reason_counts': dict(sorted(reason_counts.items(), key=lambda kv: (-kv[1], kv[0]))),
         'batch_ref_count': len(batch_refs),
         'batch_promote_command': batch_promote_command,
@@ -734,6 +756,7 @@ def print_review(
     triggers=None,
     pending_only: bool = False,
     related_limit: int = 3,
+    context_lines: int = 0,
 ):
     summary = memory_review(
         paths,
@@ -743,6 +766,7 @@ def print_review(
         triggers=triggers,
         pending_only=pending_only,
         related_limit=max(1, related_limit),
+        context_lines=max(0, context_lines),
     )
     if as_json:
         print(json.dumps(summary, ensure_ascii=False))
@@ -750,7 +774,7 @@ def print_review(
     print(
         f"days_scanned={summary['days_scanned']} candidate_count={summary['candidate_count']} "
         f"pending_only={'yes' if summary['pending_only'] else 'no'} related_limit={summary['related_limit']} "
-        f"batch_ref_count={summary['batch_ref_count']}"
+        f"context_lines={summary['context_lines']} batch_ref_count={summary['batch_ref_count']}"
     )
     if summary['reason_counts']:
         reasons = ', '.join(f"{reason}({count})" for reason, count in summary['reason_counts'].items())
@@ -772,6 +796,11 @@ def print_review(
         print(f"score={item['score']} {item['ref']} {item['time']} reasons={reasons} already_in_long_memory={long_flag}")
         print(f"  note: {item['note']}")
         print(f"  promote: {item['promote_command']}")
+        if item['source_context']:
+            print('  source_context:')
+            for line in item['source_context']:
+                marker = '>' if line['is_target'] else ' '
+                print(f"    {marker} {line['line_no']}: {line['text']}")
         if item['related_long_matches']:
             print('  related_long_matches:')
             for match in item['related_long_matches']:
@@ -918,6 +947,7 @@ def build_parser():
     rv.add_argument('--min-score', type=int, default=2)
     rv.add_argument('--pending-only', action='store_true')
     rv.add_argument('--related-limit', type=int, default=3)
+    rv.add_argument('--context-lines', type=int, default=0)
     rv.add_argument('--json', action='store_true')
 
     pr = sub.add_parser('promote', help='Promote a timestamped daily memory note into MEMORY.md by ref')
@@ -993,6 +1023,7 @@ def main():
             triggers=triggers,
             pending_only=args.pending_only,
             related_limit=max(1, args.related_limit),
+            context_lines=max(0, args.context_lines),
         )
     elif args.cmd == 'promote':
         try:
