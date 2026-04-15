@@ -45,3 +45,33 @@ def test_review_shows_related_long_memory(tmp_path):
     assert 'reason_counts:' in out.stdout
     assert 'batch_promote:' in out.stdout
     assert 'promote-candidates' in out.stdout
+
+
+def test_candidates_and_review_support_exact_date_filters(tmp_path):
+    mem = tmp_path / 'memory'
+    mem.mkdir(parents=True, exist_ok=True)
+    (mem / '2026-04-10.md').write_text('- 08:00 remember earlier policy\n', encoding='utf-8')
+    (mem / '2026-04-11.md').write_text('- 09:00 remember scoped policy shift\n', encoding='utf-8')
+
+    candidates = run_cmd(
+        tmp_path,
+        'candidates',
+        '--days', '30',
+        '--min-score', '1',
+        '--after', '2026-04-11',
+        '--before', '2026-04-11',
+    )
+    assert '2026-04-11.md:1' in candidates.stdout
+    assert '2026-04-10.md:1' not in candidates.stdout
+
+    review = run_cmd(
+        tmp_path,
+        'review',
+        '--days', '30',
+        '--min-score', '1',
+        '--after', '2026-04-11',
+        '--before', '2026-04-11',
+    )
+    assert '--after 2026-04-11 --before 2026-04-11' in review.stdout
+    assert '2026-04-11.md:1' in review.stdout
+    assert '2026-04-10.md:1' not in review.stdout

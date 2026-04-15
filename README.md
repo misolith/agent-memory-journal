@@ -131,11 +131,15 @@ python3 agent_memory_journal.py --root /path/to/workspace cadence --days 14
 python3 agent_memory_journal.py --root /path/to/workspace digest --days 7
 python3 agent_memory_journal.py --root /path/to/workspace candidates --days 7
 python3 agent_memory_journal.py --root /path/to/workspace candidates --days 7 --pending-only --json
+python3 agent_memory_journal.py --root /path/to/workspace candidates --days 30 --after 2026-04-01 --before 2026-04-07
 python3 agent_memory_journal.py --root /path/to/workspace review --days 7 --pending-only
 python3 agent_memory_journal.py --root /path/to/workspace review --days 7 --pending-only --context-lines 1
+python3 agent_memory_journal.py --root /path/to/workspace review --days 30 --after 2026-04-01 --before 2026-04-07
 python3 agent_memory_journal.py --root /path/to/workspace promote --ref 2026-03-30.md:12 --prefix-date
 python3 agent_memory_journal.py --root /path/to/workspace promote-candidates --days 7 --prefix-date
 ```
+
+`review` now preserves any `--after/--before` bounds in its emitted `batch_promote` command, so a scoped review can be promoted without widening the window by accident.
 
 `review` now emits an aggregate `reason_counts` summary, an optional `source_context` excerpt around each candidate, and a ready-to-run `batch_promote` command when there are pending candidates, so operators can move from inspection to promotion without rebuilding the selection manually.
 

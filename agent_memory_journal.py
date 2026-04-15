@@ -408,8 +408,8 @@ def print_search(paths: JournalPaths, **kwargs):
         print(f"{item['source']} {item['path']}:{item['line']} {item['text']}")
 
 
-def _note_words(paths: JournalPaths, days: int):
-    files = iter_daily_files(paths, days)
+def _note_words(paths: JournalPaths, days: int, after_date=None, before_date=None):
+    files = iter_daily_files(paths, days, after_date=after_date, before_date=before_date)
     words = []
     notes = []
     stop = {
@@ -462,7 +462,7 @@ def memory_stats(paths: JournalPaths, days: int = 7, top: int = 10):
 
 
 def memory_topics(paths: JournalPaths, days: int = 14, top: int = 8, samples: int = 2, min_count: int = 2, after_date=None, before_date=None):
-    notes, words = _note_words(paths, days)
+    notes, words = _note_words(paths, days, after_date=after_date, before_date=before_date)
     counts = Counter(words)
     word_samples = {}
     for note in notes:
@@ -506,7 +506,7 @@ def print_topics(paths: JournalPaths, days: int = 14, top: int = 8, samples: int
         print(f"- {topic['word']}({topic['count']}): {' | '.join(topic['samples'])}")
 
 
-def memory_cadence(paths: JournalPaths, days: int = 14, top_hours: int = 3):
+def memory_cadence(paths: JournalPaths, days: int = 14, top_hours: int = 3, after_date=None, before_date=None):
     files = iter_daily_files(paths, days, after_date=after_date, before_date=before_date)
     per_day = []
     hourly = Counter()
@@ -535,11 +535,11 @@ def print_cadence(paths: JournalPaths, days: int = 14, top_hours: int = 3, as_js
     print('busiest_hours: ' + ', '.join(f"{h['hour']}:00({h['count']})" for h in summary['busiest_hours']))
 
 
-def memory_digest(paths: JournalPaths, days: int = 7, recent_limit: int = 5, top: int = 5):
+def memory_digest(paths: JournalPaths, days: int = 7, recent_limit: int = 5, top: int = 5, after_date=None, before_date=None):
     stats = memory_stats(paths, days=max(1, days), top=max(1, top))
-    cadence = memory_cadence(paths, days=max(1, days), top_hours=max(1, min(top, 3)))
-    topics = memory_topics(paths, days=max(1, days), top=max(1, top), samples=1, min_count=2)
-    recent = collect_recent(paths, days=max(1, days), limit=max(1, recent_limit), grep=None)
+    cadence = memory_cadence(paths, days=max(1, days), top_hours=max(1, min(top, 3)), after_date=after_date, before_date=before_date)
+    topics = memory_topics(paths, days=max(1, days), top=max(1, top), samples=1, min_count=2, after_date=after_date, before_date=before_date)
+    recent = collect_recent(paths, days=max(1, days), limit=max(1, recent_limit), grep=None, after_date=after_date, before_date=before_date)
     return {'days_scanned': days, 'stats': stats, 'cadence': cadence, 'topics': topics, 'recent': recent}
 
 
@@ -702,6 +702,8 @@ def memory_review(
     pending_only: bool = False,
     related_limit: int = 3,
     context_lines: int = 0,
+    after_date=None,
+    before_date=None,
 ) -> dict:
     summary = memory_candidates(
         paths,
@@ -710,6 +712,8 @@ def memory_review(
         min_score=max(1, min_score),
         triggers=triggers,
         pending_only=pending_only,
+        after_date=after_date,
+        before_date=before_date,
     )
     reviewed = []
     reason_counts = Counter()
@@ -729,9 +733,14 @@ def memory_review(
 
     batch_promote_command = None
     if batch_refs:
+        date_filters = ''
+        if after_date:
+            date_filters += f" --after {after_date.isoformat()}"
+        if before_date:
+            date_filters += f" --before {before_date.isoformat()}"
         batch_promote_command = (
             f"{Path(__file__).name} --root {paths.root} promote-candidates "
-            f"--days {max(1, days)} --limit {max(1, limit)} --min-score {max(1, min_score)} --prefix-date"
+            f"--days {max(1, days)} --limit {max(1, limit)} --min-score {max(1, min_score)}{date_filters} --prefix-date"
         )
 
     return {
@@ -757,6 +766,8 @@ def print_review(
     pending_only: bool = False,
     related_limit: int = 3,
     context_lines: int = 0,
+    after_date=None,
+    before_date=None,
 ):
     summary = memory_review(
         paths,
@@ -767,6 +778,8 @@ def print_review(
         pending_only=pending_only,
         related_limit=max(1, related_limit),
         context_lines=max(0, context_lines),
+        after_date=after_date,
+        before_date=before_date,
     )
     if as_json:
         print(json.dumps(summary, ensure_ascii=False))
@@ -938,6 +951,8 @@ def build_parser():
     cc.add_argument('--days', type=int, default=7)
     cc.add_argument('--limit', type=int, default=10)
     cc.add_argument('--min-score', type=int, default=2)
+    cc.add_argument('--after', type=parse_iso_date)
+    cc.add_argument('--before', type=parse_iso_date)
     cc.add_argument('--pending-only', action='store_true', help='Only show candidates not already present in long-term memory')
     cc.add_argument('--json', action='store_true')
 
@@ -945,6 +960,8 @@ def build_parser():
     rv.add_argument('--days', type=int, default=7)
     rv.add_argument('--limit', type=int, default=10)
     rv.add_argument('--min-score', type=int, default=2)
+    rv.add_argument('--after', type=parse_iso_date)
+    rv.add_argument('--before', type=parse_iso_date)
     rv.add_argument('--pending-only', action='store_true')
     rv.add_argument('--related-limit', type=int, default=3)
     rv.add_argument('--context-lines', type=int, default=0)
@@ -1004,6 +1021,8 @@ def main():
     elif args.cmd == 'digest':
         print_digest(paths, days=max(1, args.days), recent_limit=max(1, args.recent_limit), top=max(1, args.top), as_json=args.json)
     elif args.cmd == 'candidates':
+        if args.after and args.before and args.after > args.before:
+            raise SystemExit("Invalid date range: --after cannot be later than --before")
         print_candidates(
             paths,
             days=max(1, args.days),
@@ -1012,8 +1031,12 @@ def main():
             as_json=args.json,
             triggers=triggers,
             pending_only=args.pending_only,
+            after_date=args.after,
+            before_date=args.before,
         )
     elif args.cmd == 'review':
+        if args.after and args.before and args.after > args.before:
+            raise SystemExit("Invalid date range: --after cannot be later than --before")
         print_review(
             paths,
             days=max(1, args.days),
@@ -1024,6 +1047,8 @@ def main():
             pending_only=args.pending_only,
             related_limit=max(1, args.related_limit),
             context_lines=max(0, args.context_lines),
+            after_date=args.after,
+            before_date=args.before,
         )
     elif args.cmd == 'promote':
         try:
