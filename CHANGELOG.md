@@ -6,6 +6,7 @@
 # Changelog
 
 ## Unreleased
+- make `--days` lookback windows inclusive of today plus the prior N dates so boundary-day review candidates are not dropped unexpectedly
 - add `review --context-lines` so candidate review can include neighboring source lines before promotion
 - add `promote` and `promote-candidates` to the public CLI so the packaged tool matches the documented alpha contract and internal production workflow
 - add `candidates --pending-only` so promotion review can ignore notes already present in `MEMORY.md`

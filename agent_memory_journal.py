@@ -296,7 +296,10 @@ def extract_candidates(text: str, triggers=None):
 def iter_daily_files(paths: JournalPaths, days: int, after_date=None, before_date=None):
     if not paths.mem_dir.exists():
         return []
-    rolling_cutoff = datetime.now().date() - timedelta(days=max(0, days - 1))
+    # Treat --days as a lookback window in addition to today, so --days 2
+    # includes notes from today plus the prior two dates. This matches how
+    # operators naturally read "last 2 days" during review flows.
+    rolling_cutoff = datetime.now().date() - timedelta(days=max(0, days))
     min_date = max(rolling_cutoff, after_date) if after_date else rolling_cutoff
     max_date = before_date
     candidates = []

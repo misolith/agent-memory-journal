@@ -143,6 +143,8 @@ python3 agent_memory_journal.py --root /path/to/workspace promote-candidates --d
 
 `review` now emits an aggregate `reason_counts` summary, an optional `source_context` excerpt around each candidate, and a ready-to-run `batch_promote` command when there are pending candidates, so operators can move from inspection to promotion without rebuilding the selection manually.
 
+All `--days` review windows are inclusive of today plus the prior N dates, so `--days 2` covers a three-date slice (today, yesterday, and the day before). That keeps review behavior aligned with normal operator expectations instead of trimming the oldest boundary date.
+
 ### Extract likely memory-worthy lines from raw text
 
 ```bash
