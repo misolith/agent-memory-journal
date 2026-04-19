@@ -296,13 +296,8 @@ def extract_candidates(text: str, triggers=None):
 def iter_daily_files(paths: JournalPaths, days: int, after_date=None, before_date=None):
     if not paths.mem_dir.exists():
         return []
-    # Treat --days as a lookback window in addition to today, so --days 2
-    # includes notes from today plus the prior two dates. This matches how
-    # operators naturally read "last 2 days" during review flows.
-    rolling_cutoff = datetime.now().date() - timedelta(days=max(0, days))
-    min_date = max(rolling_cutoff, after_date) if after_date else rolling_cutoff
-    max_date = before_date
-    candidates = []
+
+    discovered = []
     for p in paths.mem_dir.glob('*.md'):
         m = DAILY_FILE_RE.match(p.name)
         if not m:
@@ -311,6 +306,23 @@ def iter_daily_files(paths: JournalPaths, days: int, after_date=None, before_dat
             d = datetime.strptime(m.group(1), '%Y-%m-%d').date()
         except ValueError:
             continue
+        discovered.append((d, p))
+
+    if not discovered:
+        return []
+
+    latest_file_date = max(d for d, _p in discovered)
+    anchor_date = min(datetime.now().date(), latest_file_date) if not before_date else before_date
+
+    # Treat --days as a lookback window in addition to the anchor date, so
+    # --days 2 includes the anchor date plus the prior two dates. Using the
+    # latest discovered file as a fallback anchor keeps historical/test roots
+    # reviewable even when their notes are older than the real clock.
+    rolling_cutoff = anchor_date - timedelta(days=max(0, days))
+    min_date = max(rolling_cutoff, after_date) if after_date else rolling_cutoff
+    max_date = before_date
+    candidates = []
+    for d, p in discovered:
         if d < min_date:
             continue
         if max_date and d > max_date:

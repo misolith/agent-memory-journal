@@ -1,5 +1,6 @@
 
 ## Unreleased
+- anchor rolling day-window scans to the latest discovered daily note when reviewing historical/test roots, so `review` and related commands still surface older notes reliably
 - add `candidates --after/--before` and `review --after/--before` so promotion review can target exact daily windows
 - preserve `review` date filters in emitted `batch_promote` commands so scoped promotion runs do not drift
 - added a `review` command that shows candidate notes alongside related `MEMORY.md` bullets and copyable promotion commands
