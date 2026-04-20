@@ -75,3 +75,22 @@ def test_candidates_and_review_support_exact_date_filters(tmp_path):
     assert '--after 2026-04-11 --before 2026-04-11' in review.stdout
     assert '2026-04-11.md:1' in review.stdout
     assert '2026-04-10.md:1' not in review.stdout
+
+
+def test_doctor_reports_duplicate_long_memory_and_bad_daily_lines(tmp_path):
+    memory_dir = tmp_path / 'memory'
+    memory_dir.mkdir(parents=True, exist_ok=True)
+    (tmp_path / 'MEMORY.md').write_text(
+        '# MEMORY.md\n\n- repeated durable note\n- Repeated durable note\n',
+        encoding='utf-8',
+    )
+    (memory_dir / '2026-04-20.md').write_text(
+        '- 09:00 first note\n- malformed bullet\n- 08:30 out of order\n',
+        encoding='utf-8',
+    )
+
+    out = run_cmd(tmp_path, 'doctor', '--days', '30')
+    assert 'status=ISSUES_FOUND' in out.stdout
+    assert 'long_duplicates:' in out.stdout
+    assert 'malformed_daily_lines:' in out.stdout
+    assert 'daily_timestamp_order_issues:' in out.stdout

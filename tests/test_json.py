@@ -76,3 +76,16 @@ def test_promote_candidates_json_dry_run(tmp_path):
     assert data['requested'] == 1
     assert data['added'] == 0
     assert data['results'][0]['status'] == 'DRY_RUN'
+
+
+def test_doctor_json(tmp_path):
+    memory_dir = tmp_path / 'memory'
+    memory_dir.mkdir(parents=True, exist_ok=True)
+    (tmp_path / 'MEMORY.md').write_text('# MEMORY.md\n\n- alpha\n- Alpha\n', encoding='utf-8')
+    (memory_dir / f'{date.today().isoformat()}.md').write_text('- broken bullet\n', encoding='utf-8')
+
+    out = run_cmd(tmp_path, 'doctor', '--days', '7', '--json')
+    data = json.loads(out.stdout)
+    assert data['status'] == 'ISSUES_FOUND'
+    assert data['long_duplicates'][0]['count'] == 2
+    assert data['malformed_daily_lines'][0]['line_no'] == 1

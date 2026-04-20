@@ -11,7 +11,7 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
 
-VERSION = '0.1.1'
+VERSION = '0.1.2'
 
 LINE_RE = re.compile(r"^-\s+(\d{2}:\d{2})\s+(.*)$")
 LONG_BULLET_RE = re.compile(r"^-\s+(.*)$")
@@ -136,6 +136,108 @@ def has_long_duplicate(paths: JournalPaths, note: str) -> bool:
         if normalize_note(m.group(1)) == target:
             return True
     return False
+
+
+def long_memory_duplicates(paths: JournalPaths) -> list[dict[str, object]]:
+    if not paths.long.exists():
+        return []
+    seen: dict[str, dict[str, object]] = {}
+    try:
+        lines = paths.long.read_text(encoding='utf-8', errors='ignore').splitlines()
+    except Exception:
+        return []
+    for line_no, raw in enumerate(lines, start=1):
+        m = LONG_BULLET_RE.match(raw.strip())
+        if not m:
+            continue
+        note = m.group(1).strip()
+        normalized = normalize_note(note)
+        if not normalized:
+            continue
+        bucket = seen.setdefault(normalized, {'note': note, 'count': 0, 'lines': []})
+        bucket['count'] += 1
+        bucket['lines'].append(line_no)
+    return sorted(
+        [item for item in seen.values() if item['count'] > 1],
+        key=lambda item: (-int(item['count']), item['note'].lower()),
+    )
+
+
+def daily_file_health(path: Path) -> dict[str, object]:
+    malformed: list[dict[str, object]] = []
+    timestamp_order_issues: list[dict[str, object]] = []
+
+    try:
+        lines = path.read_text(encoding='utf-8', errors='ignore').splitlines()
+    except Exception as exc:
+        return {
+            'path': str(path),
+            'malformed': [{'line_no': 0, 'text': f'READ_ERROR: {exc}'}],
+            'timestamp_order_issues': [],
+        }
+
+    previous_minutes: int | None = None
+    previous_time: str | None = None
+    for line_no, raw in enumerate(lines, start=1):
+        stripped = raw.strip()
+        if not stripped.startswith('- '):
+            continue
+
+        match = LINE_RE.match(stripped)
+        if not match:
+            malformed.append({'line_no': line_no, 'text': raw})
+            continue
+
+        hhmm = match.group(1)
+        try:
+            parsed = datetime.strptime(hhmm, '%H:%M').time()
+        except ValueError:
+            malformed.append({'line_no': line_no, 'text': raw})
+            continue
+
+        minute_of_day = parsed.hour * 60 + parsed.minute
+        if previous_minutes is not None and minute_of_day < previous_minutes:
+            timestamp_order_issues.append({
+                'line_no': line_no,
+                'time': hhmm,
+                'previous_time': previous_time,
+                'text': raw,
+            })
+
+        previous_minutes = minute_of_day
+        previous_time = hhmm
+
+    return {
+        'path': str(path),
+        'malformed': malformed,
+        'timestamp_order_issues': timestamp_order_issues,
+    }
+
+
+def memory_doctor(paths: JournalPaths, days: int = 7) -> dict[str, object]:
+    files = iter_daily_files(paths, days=max(1, days))
+    daily_reports = [daily_file_health(path) for path in files]
+    malformed = [
+        {'path': report['path'], **item}
+        for report in daily_reports
+        for item in report['malformed']
+    ]
+    timestamp_order_issues = [
+        {'path': report['path'], **item}
+        for report in daily_reports
+        for item in report['timestamp_order_issues']
+    ]
+    long_duplicates = long_memory_duplicates(paths)
+    issue_count = len(malformed) + len(timestamp_order_issues) + len(long_duplicates)
+    return {
+        'days_scanned': max(1, days),
+        'files_checked': len(files),
+        'long_duplicates': long_duplicates,
+        'malformed_daily_lines': malformed,
+        'daily_timestamp_order_issues': timestamp_order_issues,
+        'issue_count': issue_count,
+        'status': 'ISSUES_FOUND' if issue_count else 'OK',
+    }
 
 
 def append_daily(paths: JournalPaths, note: str, dedupe_minutes: int = 0) -> bool:
@@ -891,6 +993,37 @@ def print_promote_candidates(
         print(f"{item['status']} {item['ref']} {item['note']}")
 
 
+def print_doctor(paths: JournalPaths, days: int = 7, as_json: bool = False):
+    summary = memory_doctor(paths, days=max(1, days))
+
+    if as_json:
+        print(json.dumps(summary, ensure_ascii=False))
+        return
+
+    print(f"status={summary['status']} files_checked={summary['files_checked']} issue_count={summary['issue_count']}")
+
+    if summary['long_duplicates']:
+        print('long_duplicates:')
+        for item in summary['long_duplicates']:
+            print(f"- count={item['count']} lines={','.join(str(n) for n in item['lines'])} {item['note']}")
+    else:
+        print('long_duplicates: none')
+
+    if summary['malformed_daily_lines']:
+        print('malformed_daily_lines:')
+        for item in summary['malformed_daily_lines']:
+            print(f"- {item['path']}:{item['line_no']} {item['text']}")
+    else:
+        print('malformed_daily_lines: none')
+
+    if summary['daily_timestamp_order_issues']:
+        print('daily_timestamp_order_issues:')
+        for item in summary['daily_timestamp_order_issues']:
+            print(f"- {item['path']}:{item['line_no']} time={item['time']} prev={item['previous_time']} {item['text']}")
+    else:
+        print('daily_timestamp_order_issues: none')
+
+
 def build_parser():
     ap = argparse.ArgumentParser(
         description='Durable memory journal for agents and operators',
@@ -961,6 +1094,10 @@ def build_parser():
     dg.add_argument('--recent-limit', type=int, default=5)
     dg.add_argument('--top', type=int, default=5)
     dg.add_argument('--json', action='store_true')
+
+    dc = sub.add_parser('doctor', help='Audit memory files for duplicates and malformed daily note lines')
+    dc.add_argument('--days', type=int, default=14)
+    dc.add_argument('--json', action='store_true')
 
     cc = sub.add_parser('candidates', help='Surface likely long-term memory candidates')
     cc.add_argument('--days', type=int, default=7)
@@ -1035,6 +1172,8 @@ def main():
         print_cadence(paths, days=max(1, args.days), top_hours=max(1, args.top_hours), as_json=args.json)
     elif args.cmd == 'digest':
         print_digest(paths, days=max(1, args.days), recent_limit=max(1, args.recent_limit), top=max(1, args.top), as_json=args.json)
+    elif args.cmd == 'doctor':
+        print_doctor(paths, days=max(1, args.days), as_json=args.json)
     elif args.cmd == 'candidates':
         if args.after and args.before and args.after > args.before:
             raise SystemExit("Invalid date range: --after cannot be later than --before")

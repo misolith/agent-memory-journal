@@ -14,4 +14,4 @@ def test_help_contains_examples():
 
 def test_version_flag():
     result = subprocess.run([sys.executable, str(SCRIPT), '--version'], capture_output=True, text=True, check=True)
-    assert '0.1.1' in result.stdout
+    assert '0.1.2' in result.stdout

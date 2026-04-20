@@ -30,6 +30,7 @@ The internal production version still lives separately in the main OpenClaw work
 - show recent activity and memory cadence
 - surface recurring topics
 - generate compact operational digests
+- audit memory files for duplicate long-memory bullets and malformed daily note lines
 - suggest likely long-term memory candidates from recent daily notes
 - review candidates with related long-memory matches and copyable promotion commands
 - flag candidates already present in long-term memory and filter to pending-only review
@@ -129,6 +130,7 @@ python3 agent_memory_journal.py --root /path/to/workspace search --query "playin
 python3 agent_memory_journal.py --root /path/to/workspace topics --days 14
 python3 agent_memory_journal.py --root /path/to/workspace cadence --days 14
 python3 agent_memory_journal.py --root /path/to/workspace digest --days 7
+python3 agent_memory_journal.py --root /path/to/workspace doctor --days 14
 python3 agent_memory_journal.py --root /path/to/workspace candidates --days 7
 python3 agent_memory_journal.py --root /path/to/workspace candidates --days 7 --pending-only --json
 python3 agent_memory_journal.py --root /path/to/workspace candidates --days 30 --after 2026-04-01 --before 2026-04-07
@@ -187,7 +189,7 @@ The repository includes a starter file at `examples/config.example.json`.
 
 Stable for the alpha line:
 - file layout: `<root>/MEMORY.md` and `<root>/memory/YYYY-MM-DD.md`
-- commands: `add`, `extract`, `recent`, `search`, `stats`, `topics`, `cadence`, `digest`, `candidates`, `review`, `promote`, `promote-candidates`
+- commands: `add`, `extract`, `recent`, `search`, `stats`, `topics`, `cadence`, `digest`, `doctor`, `candidates`, `review`, `promote`, `promote-candidates`
 - `--root`, `--config-file`, `--json`, and `--version`
 - sentinel outputs such as `NO_MATCHES` and `NO_CANDIDATES`
 
@@ -198,6 +200,7 @@ Intended for automation:
 - `topics --json`
 - `cadence --json`
 - `digest --json`
+- `doctor --json`
 - `candidates --json`
 - `review --json`
 
