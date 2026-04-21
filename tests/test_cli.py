@@ -94,3 +94,31 @@ def test_doctor_reports_duplicate_long_memory_and_bad_daily_lines(tmp_path):
     assert 'long_duplicates:' in out.stdout
     assert 'malformed_daily_lines:' in out.stdout
     assert 'daily_timestamp_order_issues:' in out.stdout
+
+
+def test_doctor_strict_exits_nonzero_when_issues_exist(tmp_path):
+    memory_dir = tmp_path / 'memory'
+    memory_dir.mkdir(parents=True, exist_ok=True)
+    (memory_dir / '2026-04-20.md').write_text('- malformed bullet\n', encoding='utf-8')
+
+    result = subprocess.run(
+        [sys.executable, str(SCRIPT), '--root', str(tmp_path), 'doctor', '--days', '30', '--strict'],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 1
+    assert 'status=ISSUES_FOUND' in result.stdout
+
+
+def test_doctor_strict_stays_zero_when_clean(tmp_path):
+    memory_dir = tmp_path / 'memory'
+    memory_dir.mkdir(parents=True, exist_ok=True)
+    (memory_dir / '2026-04-20.md').write_text('- 09:00 all clear\n', encoding='utf-8')
+
+    result = subprocess.run(
+        [sys.executable, str(SCRIPT), '--root', str(tmp_path), 'doctor', '--days', '30', '--strict'],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert 'status=OK' in result.stdout

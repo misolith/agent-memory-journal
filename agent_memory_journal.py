@@ -993,9 +993,7 @@ def print_promote_candidates(
         print(f"{item['status']} {item['ref']} {item['note']}")
 
 
-def print_doctor(paths: JournalPaths, days: int = 7, as_json: bool = False):
-    summary = memory_doctor(paths, days=max(1, days))
-
+def print_doctor_summary(summary: dict[str, object], as_json: bool = False):
     if as_json:
         print(json.dumps(summary, ensure_ascii=False))
         return
@@ -1098,6 +1096,7 @@ def build_parser():
     dc = sub.add_parser('doctor', help='Audit memory files for duplicates and malformed daily note lines')
     dc.add_argument('--days', type=int, default=14)
     dc.add_argument('--json', action='store_true')
+    dc.add_argument('--strict', action='store_true', help='Exit non-zero when audit issues are found')
 
     cc = sub.add_parser('candidates', help='Surface likely long-term memory candidates')
     cc.add_argument('--days', type=int, default=7)
@@ -1173,7 +1172,10 @@ def main():
     elif args.cmd == 'digest':
         print_digest(paths, days=max(1, args.days), recent_limit=max(1, args.recent_limit), top=max(1, args.top), as_json=args.json)
     elif args.cmd == 'doctor':
-        print_doctor(paths, days=max(1, args.days), as_json=args.json)
+        summary = memory_doctor(paths, days=max(1, args.days))
+        print_doctor_summary(summary, as_json=args.json)
+        if args.strict and summary['issue_count']:
+            raise SystemExit(1)
     elif args.cmd == 'candidates':
         if args.after and args.before and args.after > args.before:
             raise SystemExit("Invalid date range: --after cannot be later than --before")

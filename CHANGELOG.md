@@ -1,6 +1,7 @@
 
 ## Unreleased
 - add a `doctor` command that audits duplicate long-memory bullets plus malformed or out-of-order daily note lines
+- add `doctor --strict` so audit issues return a non-zero exit code for cron and CI workflows
 - anchor rolling day-window scans to the latest discovered daily note when reviewing historical/test roots, so `review` and related commands still surface older notes reliably
 - add `candidates --after/--before` and `review --after/--before` so promotion review can target exact daily windows
 - preserve `review` date filters in emitted `batch_promote` commands so scoped promotion runs do not drift
