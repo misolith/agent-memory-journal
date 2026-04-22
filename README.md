@@ -133,6 +133,7 @@ python3 agent_memory_journal.py --root /path/to/workspace cadence --days 14
 python3 agent_memory_journal.py --root /path/to/workspace digest --days 7
 python3 agent_memory_journal.py --root /path/to/workspace doctor --days 14
 python3 agent_memory_journal.py --root /path/to/workspace doctor --days 14 --strict
+python3 agent_memory_journal.py --root /path/to/workspace doctor --days 30 --after 2026-04-01 --before 2026-04-07
 python3 agent_memory_journal.py --root /path/to/workspace candidates --days 7
 python3 agent_memory_journal.py --root /path/to/workspace candidates --days 7 --pending-only --json
 python3 agent_memory_journal.py --root /path/to/workspace candidates --days 30 --after 2026-04-01 --before 2026-04-07
@@ -204,6 +205,7 @@ Intended for automation:
 - `digest --json`
 - `doctor --json`
 - `doctor --strict` exits non-zero when issues are found, which makes cron or CI health checks fail loudly instead of relying on log parsing
+- `doctor --after/--before` narrows audits to exact daily windows, so historical cleanup and scoped automation do not over-scan unrelated notes
 - `candidates --json`
 - `review --json`
 

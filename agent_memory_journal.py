@@ -214,8 +214,18 @@ def daily_file_health(path: Path) -> dict[str, object]:
     }
 
 
-def memory_doctor(paths: JournalPaths, days: int = 7) -> dict[str, object]:
-    files = iter_daily_files(paths, days=max(1, days))
+def memory_doctor(
+    paths: JournalPaths,
+    days: int = 7,
+    after_date=None,
+    before_date=None,
+) -> dict[str, object]:
+    files = iter_daily_files(
+        paths,
+        days=max(1, days),
+        after_date=after_date,
+        before_date=before_date,
+    )
     daily_reports = [daily_file_health(path) for path in files]
     malformed = [
         {'path': report['path'], **item}
@@ -1095,6 +1105,8 @@ def build_parser():
 
     dc = sub.add_parser('doctor', help='Audit memory files for duplicates and malformed daily note lines')
     dc.add_argument('--days', type=int, default=14)
+    dc.add_argument('--after', type=parse_iso_date)
+    dc.add_argument('--before', type=parse_iso_date)
     dc.add_argument('--json', action='store_true')
     dc.add_argument('--strict', action='store_true', help='Exit non-zero when audit issues are found')
 
@@ -1172,7 +1184,14 @@ def main():
     elif args.cmd == 'digest':
         print_digest(paths, days=max(1, args.days), recent_limit=max(1, args.recent_limit), top=max(1, args.top), as_json=args.json)
     elif args.cmd == 'doctor':
-        summary = memory_doctor(paths, days=max(1, args.days))
+        if args.after and args.before and args.after > args.before:
+            raise SystemExit("Invalid date range: --after cannot be later than --before")
+        summary = memory_doctor(
+            paths,
+            days=max(1, args.days),
+            after_date=args.after,
+            before_date=args.before,
+        )
         print_doctor_summary(summary, as_json=args.json)
         if args.strict and summary['issue_count']:
             raise SystemExit(1)

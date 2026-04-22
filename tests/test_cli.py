@@ -122,3 +122,40 @@ def test_doctor_strict_stays_zero_when_clean(tmp_path):
         check=True,
     )
     assert 'status=OK' in result.stdout
+
+
+def test_doctor_supports_exact_date_filters(tmp_path):
+    memory_dir = tmp_path / 'memory'
+    memory_dir.mkdir(parents=True, exist_ok=True)
+    (memory_dir / '2026-04-10.md').write_text('- malformed old bullet\n', encoding='utf-8')
+    (memory_dir / '2026-04-11.md').write_text('- malformed target bullet\n', encoding='utf-8')
+
+    out = run_cmd(
+        tmp_path,
+        'doctor',
+        '--days', '30',
+        '--after', '2026-04-11',
+        '--before', '2026-04-11',
+    )
+    assert '2026-04-11.md:1' in out.stdout
+    assert '2026-04-10.md:1' not in out.stdout
+
+
+def test_doctor_rejects_inverted_date_range(tmp_path):
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT),
+            '--root',
+            str(tmp_path),
+            'doctor',
+            '--after',
+            '2026-04-12',
+            '--before',
+            '2026-04-11',
+        ],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode != 0
+    assert 'Invalid date range' in result.stderr or 'Invalid date range' in result.stdout

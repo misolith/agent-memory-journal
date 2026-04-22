@@ -89,3 +89,21 @@ def test_doctor_json(tmp_path):
     assert data['status'] == 'ISSUES_FOUND'
     assert data['long_duplicates'][0]['count'] == 2
     assert data['malformed_daily_lines'][0]['line_no'] == 1
+
+
+def test_doctor_json_date_range_filters(tmp_path):
+    memory_dir = tmp_path / 'memory'
+    memory_dir.mkdir(parents=True, exist_ok=True)
+    (memory_dir / '2026-04-10.md').write_text('- malformed old bullet\n', encoding='utf-8')
+    (memory_dir / '2026-04-11.md').write_text('- malformed target bullet\n', encoding='utf-8')
+
+    out = run_cmd(
+        tmp_path,
+        'doctor',
+        '--days', '30',
+        '--after', '2026-04-11',
+        '--before', '2026-04-11',
+        '--json',
+    )
+    data = json.loads(out.stdout)
+    assert [item['path'].split('/')[-1] for item in data['malformed_daily_lines']] == ['2026-04-11.md']
