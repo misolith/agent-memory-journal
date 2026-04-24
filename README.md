@@ -18,9 +18,7 @@ Many agent workflows have the same failure mode:
 
 ## Current status
 
-This repository is the productization track.
-
-The internal production version still lives separately in the main OpenClaw workspace. This repo is where cleanup, parameterization, packaging, tests, and public-facing documentation happen before any internal migration.
+The project is in stable alpha. The core CLI, review flow, promotion flow, and doctor/audit commands are in place and covered by tests. Current work is mostly maintenance, edge-case hardening, and documentation polish rather than major new feature development.
 
 ## Core capabilities
 
@@ -256,8 +254,9 @@ Current coverage includes:
 ## Roadmap
 
 Short-term:
-- improve help text and examples
-- add more focused unit tests
+- keep maintenance-focused releases small and well-tested
+- improve help text and examples where they reduce operator friction
+- add narrowly targeted tests for bugs discovered in production use
 - clean up output contracts
 - package for easier installation
 
