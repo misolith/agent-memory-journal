@@ -28,3 +28,7 @@ classifiers = [
 
 [project.scripts]
 agent-memory-journal = "agent_memory_journal:main"
+
+[tool.setuptools]
+py-modules = ["agent_memory_journal"]
+packages = ["agent_memory"]

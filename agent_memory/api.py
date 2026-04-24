@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Iterable
 
 from .models import RecallResult
+from .normalize import token_counter
 
 
 class Journal:
@@ -47,6 +48,12 @@ class Journal:
     def _scan_file(self, path: Path, query: str, tier: str) -> Iterable[RecallResult]:
         for line_no, line in enumerate(path.read_text(encoding="utf-8", errors="ignore").splitlines(), start=1):
             lowered = line.lower()
-            if query and query in lowered:
-                score = lowered.count(query)
-                yield RecallResult(text=line.strip(), path=str(path), line_no=line_no, score=float(score), tier=tier)
+            if not query:
+                continue
+            query_tokens = token_counter(query)
+            line_tokens = token_counter(line)
+            overlap = sum(min(line_tokens[t], query_tokens[t]) for t in query_tokens)
+            substring_bonus = 1 if query in lowered else 0
+            if overlap or substring_bonus:
+                score = float(overlap + substring_bonus)
+                yield RecallResult(text=line.strip(), path=str(path), line_no=line_no, score=score, tier=tier)
