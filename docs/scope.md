@@ -113,7 +113,7 @@ It does **not** optimize for:
 ## Success criteria for scope
 
 The scope is correct when all of the following are true:
-- `AGENT.md` remains small enough to load all the time
+- `AGENT.md` remains small enough to load all the time and stays within the hard limit defined in `docs/architecture.md`
 - `core/` is the main durable working memory layer
 - `episodic/` remains useful as raw source material, not as the agent's primary memory surface
 - promotion requires either repeated evidence or explicit human/agent intent

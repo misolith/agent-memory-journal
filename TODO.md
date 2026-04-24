@@ -396,12 +396,15 @@ Nämä tehdään seuraavaksi, tässä järjestyksessä:
 1. Kirjoita `docs/scope.md`
 2. Kirjoita `docs/architecture.md`
 3. Kirjoita `docs/promotion_rules.md`
-4. Refaktoroi monoliitti pakettirunkoon ilman behavior-muutosta
-5. Lisää uusi storage layout rinnakkaistukena
-6. Implementoi candidate/core/AGENT.md pipeline
-7. Lisää BM25 recall
-8. Lisää guardrailit ja verify-polku
-9. Päivitä README + SKILL
+4. Kirjoita `docs/glossary.md`
+5. Kirjoita `docs/open_questions.md`
+6. Ratkaise open questions ennen Phase B:tä
+7. Refaktoroi monoliitti pakettirunkoon ilman behavior-muutosta
+8. Lisää uusi storage layout rinnakkaistukena
+9. Implementoi candidate/core/AGENT.md pipeline
+10. Lisää BM25 recall
+11. Lisää guardrailit ja verify-polku
+12. Päivitä README + SKILL
 
 ---
 

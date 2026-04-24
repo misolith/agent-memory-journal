@@ -44,7 +44,7 @@ Purpose:
 Rules:
 - generated from reviewed/pinned core memory
 - not the source of truth for broad history
-- hard limit: 2048 characters
+- V1 hard limit: 2048 characters, with token-based enforcement planned as a follow-up tightening
 - if over limit, validation fails
 
 ### 2. core/
@@ -163,7 +163,7 @@ Target modules:
 - `storage.py`: markdown I/O, path discipline, migration helpers, manifest reads/writes
 - `promote.py`: candidate extraction, scoring, promotion, decay, supersedes
 - `recall.py`: exact search, BM25 ranking, semantic adapter layer
-- `security.py`: provenance checks, sanitization, path validation, integrity rules
+- `security.py`: provenance checks (`user|agent|subagent|import`), sanitization, path validation, integrity rules
 - `api.py`: public Python interface
 - `cli.py`: command-line wrappers over API
 
