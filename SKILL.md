@@ -127,9 +127,16 @@ Run tests:
 .venv/bin/pytest -q
 ```
 
-Run the tool directly:
+Run the legacy CLI directly without installation:
 
 ```bash
+python3 agent_memory_journal.py --root /path/to/root recent --days 2
+```
+
+If you want the console script, install the package first:
+
+```bash
+.venv/bin/pip install -e .
 agent-memory-journal --root /path/to/root recent --days 2
 ```
 
@@ -139,3 +146,15 @@ agent-memory-journal --root /path/to/root recent --days 2
 - Use `--long` sparingly; not every note belongs in long-term memory.
 - Use `candidates` before promoting many notes into `MEMORY.md`.
 - Keep the memory system file-based and inspectable.
+
+## V2 usage direction
+
+Prefer the importable Python API over shelling out to the CLI when integrating with an agent.
+
+Recommended flow:
+- initialize `.memory/` with `Journal.init_v2()`
+- write episodic notes with `note_v2(...)`
+- write pinned durable constraints with `remember_v2(...)`
+- record review-loop findings with `session_note(...)` or `review_memory.log_review_findings(...)`
+- run promotion and rebuild with `ingest_cycle(...)`
+- query durable warm memory with `core_recall.recall_core(...)`
