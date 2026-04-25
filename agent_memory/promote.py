@@ -11,6 +11,14 @@ EPISODIC_LINE_RE = re.compile(r"^-\s+(\d{2}:\d{2})\s+(.*?)(?:\s+\[(.*)\])?$")
 FIELD_RE = re.compile(r"(category|importance|source):([^\s\]]+)")
 DEFAULT_MATCH_THRESHOLD = 0.60
 DEFAULT_OVERLAP_THRESHOLD = 0.5
+DEFAULT_TRIGGERS = [
+    r'\bremember\b',
+    r'\bdecision\b',
+    r'\bdecided\b',
+    r'\bfrom now on\b',
+    r'\balways\b',
+    r'\bpriority\b',
+]
 
 
 @dataclass
@@ -65,7 +73,7 @@ def _counter_overlap_ratio(a: str, b: str) -> float:
     return overlap / denom
 
 
-def collect_candidates(root: str | Path, match_threshold: float = 0.72, overlap_threshold: float = 0.5) -> list[Candidate]:
+def collect_candidates(root: str | Path, match_threshold: float = DEFAULT_MATCH_THRESHOLD, overlap_threshold: float = DEFAULT_OVERLAP_THRESHOLD) -> list[Candidate]:
     groups: list[dict] = []
     for entry in iter_episodic_entries(root):
         normalized, tokens = normalize_claim(entry['text'])
