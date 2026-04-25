@@ -1,18 +1,22 @@
 # Agent Memory Journal V2 (Zeus)
 
-A robust 3-tier memory system for autonomous agents.
+A robust, 3-tier memory system designed for autonomous agents. It moves beyond simple notes to a structured cognitive architecture featuring Hot, Warm, and Cold storage layers.
 
-## Features
+## Cognitive Architecture
 
-- **3-Tier Storage**:
-    - **Hot** (`AGENT.md`): Pinned items always in context.
-    - **Warm** (`core/`): Curated long-term memories (decisions, constraints, etc.).
-    - **Cold** (`episodic/`): Daily logs of events and observations.
-- **Probabilistic Recall**: Uses BM25 for ranked retrieval across all tiers.
-- **Weighted Search**: Warm memories outrank episodic logs.
-- **Autonomous Promotion**: Repeated episodic notes are automatically promoted to Core.
-- **Integrity Checks**: Manifest-based verification of memory files.
-- **Safety**: Built-in sanitation and prompt-injection defense for Core memories.
+The system organizes memory into three tiers to balance immediate context availability with long-term retrieval:
+
+1.  **Hot Set (`AGENT.md`)**:
+    *   **Always in context**: Intended to be loaded with every agent prompt.
+    *   **Size-constrained**: Strictly limited to 2048 characters to prevent context bloat.
+    *   **Curated**: Contains only "pinned" core memories that directly influence agent behavior.
+2.  **Warm Memory (`core/`)**:
+    *   **Structured facts**: Categorized into `decisions`, `constraints`, `gotchas`, `preferences`, and `capabilities`.
+    *   **BM25 Searchable**: Retrieved on-demand using probabilistic ranking.
+    *   **Metadata-rich**: Each item has a stable ID, state (active/superseded), and provenance.
+3.  **Cold Archive (`episodic/`)**:
+    *   **Raw logs**: Daily chronological record of events and observations.
+    *   **Source evidence**: Used for autonomous promotion and auditing.
 
 ## Installation
 
@@ -20,39 +24,80 @@ A robust 3-tier memory system for autonomous agents.
 pip install .
 ```
 
-## CLI Usage
+## CLI Interface
 
+### Recording Observations
 ```bash
-# Add a daily note
-agent-memory-journal note "Miso prefers dark mode" --category preference
+# Add a daily episodic note
+agent-memory-journal note "User prefers dark mode for all UI elements" --category preference
 
 # Add a core constraint (pinned to AGENT.md)
-agent-memory-journal remember "Never use public wifi" --category constraint --pinned
+agent-memory-journal remember "Never use public wifi for sensitive ops" --category constraint --pinned
+```
 
-# Search all tiers
-agent-memory-journal search --query "preferences"
+### Retrieval and Maintenance
+```bash
+# Search across all tiers (Core hits are weighted 1.5x)
+agent-memory-journal search --query "network safety"
 
-# Mark a memory as superseded
-agent-memory-journal forget dec-1234567890
+# Supersede an outdated memory
+agent-memory-journal forget con-12345
 
-# Integrity check
+# Perform ingestion (Promote repeated facts & rebuild AGENT.md)
+agent-memory-journal ingest
+
+# Verify memory integrity
 agent-memory-journal doctor --strict
 ```
 
-## API Usage
+## Python API
+
+The `Journal` class is the primary entry point for agent integration.
 
 ```python
 from agent_memory import Journal
 
+# Initialize
 j = Journal(root="~/.memory")
 j.init()
 
 # Store episodic memory
-j.note("User mentioned Arc Raiders interest")
+j.note("Detected high latency on primary gateway")
 
-# Search (Warm hits weighted 1.5x)
-hits = j.recall("games")
+# Store core memory with supersedes flow
+j.remember("Gateway 10.0.0.1 is unstable", category="gotcha", supersedes="got-prev-id")
 
-# Promote candidates & rebuild AGENT.md
-j.ingest()
+# Search (returns RecallResult objects)
+hits = j.recall("gateway status", tier="all")
+for hit in hits:
+    print(f"[{hit.tier}] {hit.text} (Score: {hit.score})")
+```
+
+## Advanced Features
+
+### Autonomous Promotion
+The `ingest` cycle automatically detects facts repeated across different days in the episodic logs. If a fact appears on at least 2 distinct days, it is promoted to the **Warm** (Core) tier as a `decision` or based on keyword triggers.
+
+### Memory Decay & Archiving
+To prevent the Warm tier from becoming a "junk drawer," unpinned core memories that haven't been modified or referenced for 30 days are automatically moved to the `archive/` directory during the `ingest` cycle.
+
+### Session Management
+Short-term session memory is stored in `.memory/sessions/<session_id>.md`.
+*   **Lifecycle**: Currently, sessions are persistent files. Future versions will support TTL-based cleanup.
+*   **Context**: Agents can use `j.session_note(session_id, text)` to record ephemeral context that doesn't yet belong in the long-term episodic log.
+
+### Integrity & Safety
+*   **Doctor**: Uses SHA256 manifests to ensure core memory files haven't been tampered with or corrupted.
+*   **Sanitization**: Core memories are screened for prompt-injection patterns and control characters before promotion.
+
+## Directory Layout
+
+```text
+.memory/
+├── AGENT.md           # Hot Set (Auto-generated)
+├── core/              # Warm Memory (decisions, constraints, etc.)
+├── episodic/          # Cold Memory (YYYY-MM-DD.md)
+├── sessions/          # Session-specific context
+├── index/             # Search indexes and manifests
+└── archive/           # Decayed core memories
 ```

@@ -90,6 +90,8 @@ class Journal:
         return append_episodic_note(self.v2_root, text=text, category=category, importance=importance, source=source)
 
     def remember(self, text: str, category: str, source: str = 'agent', pinned: bool = False, supersedes: str | None = None) -> Path:
+        if supersedes:
+            self.forget(supersedes)
         return append_core_memory(self.v2_root, category=category, text=text, source=source, pinned=pinned, supersedes=supersedes)
 
     def forget(self, memory_id: str) -> bool:

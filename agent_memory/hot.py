@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .storage import init_memory_root
+from .storage import init_memory_root, extract_state
 
 HOT_LIMIT_CHARS = 2048
 
@@ -24,6 +24,8 @@ def rebuild_agent_md(root: str | Path, max_chars: int = HOT_LIMIT_CHARS) -> dict
             if not stripped.startswith('- '):
                 continue
             if not _has_metadata_flag(stripped, 'pinned:true'):
+                continue
+            if extract_state(stripped) == 'superseded':
                 continue
             selected.append(stripped)
 
