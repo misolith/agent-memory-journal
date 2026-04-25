@@ -28,16 +28,18 @@ def tokenize(text: str) -> list[str]:
 
 
 def normalize_claim(text: str) -> tuple[str, list[str]]:
-    # Remove metadata brackets before tokenizing
+    # The first return value is a canonical, deduped string used for grouping/dedupe.
+    # The second return value is the full ordered token multiset, which BM25 and
+    # token-overlap scoring need so that repeated terms count more than once.
     clean_text = re.sub(r"\s+\[.*\]\s*$", "", text)
-    tokens = []
+    tokens: list[str] = []
     for token in tokenize(clean_text):
         stemmed = simple_stem(token)
         if stemmed in STOP_WORDS:
             continue
         tokens.append(stemmed)
-    ordered = sorted(set(tokens))
-    return " ".join(ordered), ordered
+    canonical = " ".join(sorted(set(tokens)))
+    return canonical, tokens
 
 
 def jaccard_similarity(a: list[str], b: list[str]) -> float:

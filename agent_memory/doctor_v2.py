@@ -5,7 +5,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from .hot import HOT_LIMIT_CHARS
+from .hot import effective_hot_budget
 from .storage import init_memory_root
 
 
@@ -82,7 +82,8 @@ def doctor_verify(root: str | Path, fix: bool = False) -> DoctorReport:
         if actual != expected:
             mismatches.append(f'mismatch:{rel_path}')
     hot_chars = len(paths.hot_file.read_text(encoding='utf-8', errors='ignore')) if paths.hot_file.exists() else 0
-    hot_over_limit = hot_chars > HOT_LIMIT_CHARS
+    hot_budget = effective_hot_budget(paths.config)
+    hot_over_limit = hot_chars > hot_budget
     status = 'OK' if not mismatches and not hot_over_limit and checked > 0 else 'ISSUES_FOUND'
     return DoctorReport(
         status=status,

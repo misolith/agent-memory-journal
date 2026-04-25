@@ -8,8 +8,9 @@ The system organizes memory into three tiers to balance immediate context availa
 
 1.  **Hot Set (`AGENT.md`)**:
     *   **Always in context**: Intended to be loaded with every agent prompt.
-    *   **Size-constrained**: Strictly limited to 2048 characters to prevent context bloat.
+    *   **Size-constrained**: Default 2048 character budget (override via `.memory/config.json`).
     *   **Curated**: Contains only "pinned" core memories that directly influence agent behavior.
+    *   **Claim-only rendering**: Metadata (id/state/timestamps) stays in `core/`; the hot file ships just the claim text.
 2.  **Warm Memory (`core/`)**:
     *   **Structured facts**: Categorized into `decisions`, `constraints`, `gotchas`, `preferences`, and `capabilities`.
     *   **BM25 Searchable**: Retrieved on-demand using probabilistic ranking.
@@ -41,7 +42,7 @@ agent-memory-journal remember "Never use public wifi for sensitive ops" --catego
 
 ### Retrieval and Maintenance
 ```bash
-# Search across all tiers (Core hits are weighted 1.5x)
+# Search across all tiers (warm hits are weighted 2x to prefer curated memory)
 # This also updates 'last_seen' metadata for retrieved core hits.
 agent-memory-journal search --query "network safety"
 
@@ -85,7 +86,7 @@ for hit in hits:
 The `ingest` cycle automatically detects facts repeated across different days in the episodic logs. If a fact appears on at least 2 distinct days, it is promoted to the **Warm** (Core) tier as a `decision` or based on keyword triggers.
 
 ### Memory Decay & Archiving
-To prevent the Warm tier from becoming a "junk drawer," unpinned core memories that haven't been modified or referenced for 30 days are automatically moved to the `archive/` directory during the `ingest` cycle.
+To prevent the Warm tier from becoming a "junk drawer," `ingest` runs `archive_unpinned_core` as part of its cycle: unpinned core memories whose `last_seen` (or `created`, as fallback) is older than 30 days are moved into `archive/core/`. Pinned memories are never decayed automatically — they leave the active set only via `forget`.
 
 ### Session Management
 Short-term session memory is stored in `.memory/sessions/<session_id>.md`.
@@ -93,7 +94,7 @@ Short-term session memory is stored in `.memory/sessions/<session_id>.md`.
 *   **Context**: Agents can use `j.session_note(session_id, text)` to record ephemeral context that doesn't yet belong in the long-term episodic log.
 
 ### Integrity & Safety
-*   **Doctor**: Uses SHA256 manifests to ensure core memory files haven't been tampered with or corrupted.
+*   **Doctor**: Uses SHA256 manifests to ensure core memory files haven't been tampered with or corrupted. Manifest entries are refreshed automatically on `remember`/`forget` so the integrity check only flags real out-of-band edits.
 *   **Sanitization**: Core memories are screened for prompt-injection patterns and control characters before promotion.
 
 ## Directory Layout

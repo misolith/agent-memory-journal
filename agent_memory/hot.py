@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .storage import init_memory_root, extract_state
+from .storage import init_memory_root, extract_state, split_claim_and_metadata
 
 HOT_LIMIT_CHARS = 2048
+HOT_MIN_CHARS = 256
+HOT_MAX_CHARS_CEILING = 10000
 
 
 def _has_metadata_flag(line: str, flag: str) -> bool:
@@ -14,10 +16,17 @@ def _has_metadata_flag(line: str, flag: str) -> bool:
     return flag in meta.split()
 
 
-def rebuild_agent_md(root: str | Path, max_chars: int = HOT_LIMIT_CHARS) -> dict[str, object]:
+def effective_hot_budget(config: dict, override: int | None = None) -> int:
+    if override is not None:
+        return max(0, int(override))
+    raw = config.get('hot_max_chars', HOT_LIMIT_CHARS)
+    return min(max(HOT_MIN_CHARS, int(raw)), HOT_MAX_CHARS_CEILING)
+
+
+def rebuild_agent_md(root: str | Path, max_chars: int | None = None) -> dict[str, object]:
     paths = init_memory_root(root)
     selected: list[str] = []
-    max_chars = min(max(256, int(paths.config.get('hot_max_chars', max_chars))), 10000)
+    budget = effective_hot_budget(paths.config, override=max_chars)
     header = paths.config.get('hot_header', '# AGENT.md')
 
     for core_file in sorted(paths.core_dir.glob('*.md')):
@@ -29,19 +38,19 @@ def rebuild_agent_md(root: str | Path, max_chars: int = HOT_LIMIT_CHARS) -> dict
                 continue
             if extract_state(stripped) == 'superseded':
                 continue
-            selected.append(stripped)
+            claim, _meta = split_claim_and_metadata(stripped)
+            selected.append(f'- {claim}')
 
     content_lines = [header, '']
     used = len('\n'.join(content_lines))
     kept: list[str] = []
     skipped: list[str] = []
     for item in selected:
-        candidate = item
-        addition = len(candidate) + 1
-        if used + addition > max_chars:
-            skipped.append(candidate)
+        addition = len(item) + 1
+        if used + addition > budget:
+            skipped.append(item)
             continue
-        kept.append(candidate)
+        kept.append(item)
         used += addition
 
     if kept:
@@ -53,6 +62,6 @@ def rebuild_agent_md(root: str | Path, max_chars: int = HOT_LIMIT_CHARS) -> dict
     return {
         'written': len(kept),
         'skipped': len(skipped),
-        'max_chars': max_chars,
+        'max_chars': budget,
         'path': str(paths.hot_file),
     }
