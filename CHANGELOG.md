@@ -9,6 +9,15 @@
 - added a `review` command that shows candidate notes alongside related `MEMORY.md` bullets and copyable promotion commands
 # Changelog
 
+## 0.2.0
+- add a dedicated v2 `.memory/` layout with hot, warm, cold, session, archive, and index directories
+- add importable Journal API for v2 flows plus LegacyJournal compatibility during migration
+- add repeated-memory promotion, hot-set rebuild, session memory collection, ingest cycle, and review-memory logging
+- add integrity doctor + manifest verification, legacy import tooling, and archive/decay support
+- add BM25-based core recall, memory metadata (`id`, `state`, `created`), and duplicate-id protection
+- add security filtering for core/hot promotion while preserving episodic/session evidence capture
+- expand README, SKILL guidance, and executable examples for v2 usage
+
 ## Unreleased
 - make `--days` lookback windows inclusive of today plus the prior N dates so boundary-day review candidates are not dropped unexpectedly
 - add `review --context-lines` so candidate review can include neighboring source lines before promotion
