@@ -17,7 +17,7 @@ def _has_metadata_flag(line: str, flag: str) -> bool:
 def rebuild_agent_md(root: str | Path, max_chars: int = HOT_LIMIT_CHARS) -> dict[str, object]:
     paths = init_memory_root(root)
     selected: list[str] = []
-    max_chars = int(paths.config.get('hot_max_chars', max_chars))
+    max_chars = min(max(256, int(paths.config.get('hot_max_chars', max_chars))), 10000)
     header = paths.config.get('hot_header', '# AGENT.md')
 
     for core_file in sorted(paths.core_dir.glob('*.md')):
@@ -36,7 +36,7 @@ def rebuild_agent_md(root: str | Path, max_chars: int = HOT_LIMIT_CHARS) -> dict
     kept: list[str] = []
     skipped: list[str] = []
     for item in selected:
-        candidate = f'- {item[2:]}' if item.startswith('- ') else item
+        candidate = item
         addition = len(candidate) + 1
         if used + addition > max_chars:
             skipped.append(candidate)

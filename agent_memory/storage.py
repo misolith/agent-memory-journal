@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .models_v2 import MemoryItem
-from .security import require_safe_memory_text, sanitize_evidence_text
+from .security import require_safe_memory_text, sanitize_evidence_text, validate_hot_path
 
 VALID_CATEGORIES = {"decision", "constraint", "gotcha", "preference", "capability"}
 META_RE = re.compile(r"\s+\[(.*)\]\s*$")
@@ -112,10 +112,7 @@ class MemoryPaths:
     @property
     def hot_file(self) -> Path:
         hot_path = self.config.get('hot_path', 'AGENT.md')
-        candidate = Path(hot_path)
-        if candidate.is_absolute():
-            return candidate
-        return self.root / candidate
+        return validate_hot_path(self.root, hot_path)
 
     @property
     def episodic_dir(self) -> Path:

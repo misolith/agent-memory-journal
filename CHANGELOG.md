@@ -1,6 +1,14 @@
 # Changelog
 
-## Unreleased
+## 0.2.2 (2026-04-25)
+- make decay use `last_seen` as the primary activity signal, with `created` as fallback
+- add `hot_path` validation so hot-memory promotion stays confined to the workspace or memory root
+- make supersedes fail fast when the target id does not exist
+- move `LegacyJournal` out of `api.py` into a dedicated `legacy.py` module
+- harden hot-set config handling with bounded character budgets and cleaner rebuild logic
+- version BM25 cache invalidation against normalizer changes
+
+## 0.2.1 (2026-04-25)
 - add agent installation guide for workspace embedding and CLI bootstrap
 - add `.memory/config.json` support for overriding the hot promotion target, header, and character budget
 - document how to promote pinned hot memory into files like root-level `AGENTS.md`

@@ -9,6 +9,8 @@ from pathlib import Path
 
 from .normalize import normalize_claim
 
+NORMALIZER_VERSION = 1
+
 
 class BM25Index:
     def __init__(self, docs: list[str], k1: float = 1.5, b: float = 0.75):
@@ -28,7 +30,7 @@ class BM25Index:
         if cache_path.exists():
             try:
                 data = json.loads(cache_path.read_text(encoding="utf-8"))
-                if data.get("hash") == docs_hash:
+                if data.get("hash") == docs_hash and data.get("normalizer_version") == NORMALIZER_VERSION:
                     instance = cls.__new__(cls)
                     instance.docs = docs
                     instance.k1 = k1
@@ -48,6 +50,7 @@ class BM25Index:
             cache_path.parent.mkdir(parents=True, exist_ok=True)
             cache_path.write_text(json.dumps({
                 "hash": docs_hash,
+                "normalizer_version": NORMALIZER_VERSION,
                 "doc_tokens": instance.doc_tokens,
                 "doc_freqs": [dict(f) for f in instance.doc_freqs],
                 "doc_lens": instance.doc_lens,

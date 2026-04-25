@@ -9,6 +9,7 @@ from .hot import _has_metadata_flag
 from .storage import init_memory_root
 
 CREATED_RE = re.compile(r'created:([^\s\]]+)')
+LAST_SEEN_RE = re.compile(r'last_seen:([^\s\]]+)')
 
 
 @dataclass
@@ -18,8 +19,7 @@ class DecayReport:
     archive_path: str
 
 
-def _created_at(line: str) -> datetime | None:
-    match = CREATED_RE.search(line)
+def _parse_iso_field(match: re.Match[str] | None) -> datetime | None:
     if not match:
         return None
     try:
@@ -29,6 +29,14 @@ def _created_at(line: str) -> datetime | None:
     if parsed.tzinfo is None:
         parsed = parsed.replace(tzinfo=timezone.utc)
     return parsed.astimezone(timezone.utc)
+
+
+def _last_activity_at(line: str) -> datetime | None:
+    last_seen = _parse_iso_field(LAST_SEEN_RE.search(line))
+    created = _parse_iso_field(CREATED_RE.search(line))
+    if last_seen and created:
+        return max(last_seen, created)
+    return last_seen or created
 
 
 def archive_unpinned_core(root: str | Path, max_age_days: int = 30, max_active_per_file: int = 50) -> DecayReport:
@@ -50,8 +58,8 @@ def archive_unpinned_core(root: str | Path, max_age_days: int = 30, max_active_p
         stale = []
         fresh = []
         for line in unpinned:
-            created = _created_at(line)
-            if created and created < cutoff:
+            last_activity = _last_activity_at(line)
+            if last_activity and last_activity < cutoff:
                 stale.append(line)
             else:
                 fresh.append(line)
