@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.2.3 (2026-04-25)
+- add `tests/conftest.py` so `pytest -q` works from a fresh source checkout without installing the package first
 - fix `digest` CLI command crashing with `AttributeError` on `MemoryPaths.v2_root`
 - make `rebuild_agent_md(max_chars=...)` honour its caller argument and apply the 256-char floor only to config-derived values; `doctor` and `review` use the same effective budget instead of a hard-coded 2048
 - wire `archive_unpinned_core` into `ingest_cycle` so the documented 30-day decay actually happens; `IngestReport` now includes `archived_count`

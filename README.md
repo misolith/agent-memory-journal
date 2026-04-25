@@ -25,6 +25,16 @@ The system organizes memory into three tiers to balance immediate context availa
 pip install .
 ```
 
+## Development testing
+
+Run the test suite directly from a fresh checkout:
+
+```bash
+pytest -q
+```
+
+The repository ships `tests/conftest.py`, which adds the project root to `sys.path` so local test runs do not require a prior editable install.
+
 For agent embedding and workspace bootstrap, see:
 
 - `docs/agent_install.md`
