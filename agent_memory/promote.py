@@ -9,6 +9,8 @@ from .storage import VALID_CATEGORIES, append_core_memory, init_memory_root
 
 EPISODIC_LINE_RE = re.compile(r"^-\s+(\d{2}:\d{2})\s+(.*?)(?:\s+\[(.*)\])?$")
 FIELD_RE = re.compile(r"(category|importance|source):([^\s\]]+)")
+DEFAULT_MATCH_THRESHOLD = 0.60
+DEFAULT_OVERLAP_THRESHOLD = 0.5
 
 
 @dataclass
@@ -117,7 +119,7 @@ def collect_candidates(root: str | Path, match_threshold: float = 0.72, overlap_
     return candidates
 
 
-def promote_repeated_candidates(root: str | Path, min_distinct_days: int = 2, match_threshold: float = 0.60, overlap_threshold: float = 0.5) -> list[Candidate]:
+def promote_repeated_candidates(root: str | Path, min_distinct_days: int = 2, match_threshold: float = DEFAULT_MATCH_THRESHOLD, overlap_threshold: float = DEFAULT_OVERLAP_THRESHOLD) -> list[Candidate]:
     promoted: list[Candidate] = []
     for candidate in collect_candidates(root, match_threshold=match_threshold, overlap_threshold=overlap_threshold):
         if candidate.category not in VALID_CATEGORIES:

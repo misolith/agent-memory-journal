@@ -4,7 +4,7 @@ import re
 from pathlib import Path
 
 from .normalize import claims_match, token_counter
-from .promote import Candidate
+from .promote import Candidate, DEFAULT_MATCH_THRESHOLD, DEFAULT_OVERLAP_THRESHOLD
 from .storage import VALID_CATEGORIES, init_memory_root
 
 SESSION_LINE_RE = re.compile(r"^-\s+(\d{2}:\d{2})\s+(.*?)(?:\s+\[(.*)\])?$")
@@ -27,7 +27,7 @@ def _overlap_ratio(a: str, b: str) -> float:
     return overlap / denom
 
 
-def collect_session_candidates(root: str | Path, match_threshold: float = 0.60, overlap_threshold: float = 0.5) -> list[Candidate]:
+def collect_session_candidates(root: str | Path, match_threshold: float = DEFAULT_MATCH_THRESHOLD, overlap_threshold: float = DEFAULT_OVERLAP_THRESHOLD) -> list[Candidate]:
     paths = init_memory_root(root)
     groups: list[dict] = []
     for path in sorted(paths.sessions_dir.glob('*.md')):

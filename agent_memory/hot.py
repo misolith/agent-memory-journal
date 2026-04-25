@@ -7,6 +7,13 @@ from .storage import init_memory_root
 HOT_LIMIT_CHARS = 2048
 
 
+def _has_metadata_flag(line: str, flag: str) -> bool:
+    if '[' not in line or ']' not in line:
+        return False
+    meta = line.rsplit('[', 1)[-1].rstrip(']')
+    return flag in meta.split()
+
+
 def rebuild_agent_md(root: str | Path, max_chars: int = HOT_LIMIT_CHARS) -> dict[str, object]:
     paths = init_memory_root(root)
     selected: list[str] = []
@@ -16,7 +23,7 @@ def rebuild_agent_md(root: str | Path, max_chars: int = HOT_LIMIT_CHARS) -> dict
             stripped = line.strip()
             if not stripped.startswith('- '):
                 continue
-            if 'pinned:true' not in stripped:
+            if not _has_metadata_flag(stripped, 'pinned:true'):
                 continue
             selected.append(stripped)
 
