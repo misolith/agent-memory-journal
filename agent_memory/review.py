@@ -11,6 +11,7 @@ from .storage import init_memory_root
 
 @dataclass
 class ReviewReport:
+    status: str
     episodic_candidates: int
     repeated_episodic_candidates: int
     session_candidates: int
@@ -36,7 +37,9 @@ def review_state(root: str | Path) -> ReviewReport:
     episodic = collect_candidates(paths.root, match_threshold=DEFAULT_MATCH_THRESHOLD, overlap_threshold=DEFAULT_OVERLAP_THRESHOLD)
     session = collect_session_candidates(paths.root, match_threshold=DEFAULT_MATCH_THRESHOLD, overlap_threshold=DEFAULT_OVERLAP_THRESHOLD)
     repeated = sum(1 for item in episodic if item.distinct_days >= 2)
+    status = 'OK' if len(hot_text) <= 2048 else 'ISSUES_FOUND'
     return ReviewReport(
+        status=status,
         episodic_candidates=len(episodic),
         repeated_episodic_candidates=repeated,
         session_candidates=len(session),
