@@ -3,23 +3,22 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Iterable
 
+from .core_recall import recall_core
+from .ingest import ingest_cycle
 from .models import RecallResult
 from .normalize import token_counter
+from .review_memory import log_review_findings
 from .storage import append_core_memory, append_episodic_note, append_session_note, init_memory_root
 
 
 class Journal:
-    """Thin V1 API facade over the existing markdown memory layout.
-
-    This is an adapter layer for Phase B. It does not implement the new three-tier
-    architecture yet, but gives agents an importable Python API immediately.
-    """
+    """Thin V1/V2 API facade over markdown memory layouts."""
 
     def __init__(self, root: str | Path = "."):
         self.root = Path(root).expanduser().resolve()
         self.long_file = self.root / "MEMORY.md"
         self.daily_dir = self.root / "memory"
-        self.v2_root = self.root / ".memory"
+        self.v2_root = self.root if self.root.name == '.memory' else self.root / '.memory'
 
     def recall(self, query: str, k: int = 5, tier: str = "all") -> list[RecallResult]:
         q = query.lower().strip()
@@ -58,6 +57,15 @@ class Journal:
 
     def session_note(self, session_id: str, text: str, category: str | None = None, importance: str = "normal", source: str = "agent") -> Path:
         return append_session_note(self.v2_root, session_id=session_id, text=text, category=category, importance=importance, source=source)
+
+    def recall_core(self, query: str, k: int = 5):
+        return recall_core(self.v2_root, query=query, k=k)
+
+    def ingest(self):
+        return ingest_cycle(self.v2_root)
+
+    def log_review_findings(self, session_id: str, findings: list[str], category: str = 'gotcha'):
+        return log_review_findings(self.v2_root, session_id=session_id, findings=findings, category=category)
 
     def _scan_file(self, path: Path, query: str, tier: str) -> Iterable[RecallResult]:
         for line_no, line in enumerate(path.read_text(encoding="utf-8", errors="ignore").splitlines(), start=1):
