@@ -4,11 +4,15 @@ from pathlib import Path
 
 from .core_recall import recall_core
 from .episodic_recall import recall_episodic
+from .hot import rebuild_agent_md
 from .ingest import ingest_cycle
 from .legacy import LegacyJournal
 from .models import RecallResult
 from .review_memory import log_review_findings
 from .storage import append_core_memory, append_episodic_note, append_session_note, init_memory_root, supersede_memory
+
+WARM_SCORE_WEIGHT = 2.0
+PER_TIER_FETCH_MULTIPLIER = 2
 
 
 class Journal:
@@ -44,19 +48,20 @@ class Journal:
                 ) for h in hits
             ]
         if tier == 'all':
-            warm_hits = self.recall_core(query, k=max(1, k))
+            per_tier = max(1, k * PER_TIER_FETCH_MULTIPLIER)
+            warm_hits = self.recall_core(query, k=per_tier)
             warm_results = [
                 RecallResult(
                     text=h.text,
                     path=h.path,
                     line_no=h.line_no,
-                    score=h.score * 1.5,
+                    score=h.score * WARM_SCORE_WEIGHT,
                     tier='warm',
                     category=h.category
                 ) for h in warm_hits
             ]
 
-            cold_hits = recall_episodic(self.v2_root, query=query, k=max(1, k))
+            cold_hits = recall_episodic(self.v2_root, query=query, k=per_tier)
             cold_results = [
                 RecallResult(
                     text=h.text,
@@ -78,10 +83,18 @@ class Journal:
     def remember(self, text: str, category: str, source: str = 'agent', pinned: bool = False, supersedes: str | None = None) -> Path:
         if supersedes and not self.forget(supersedes):
             raise ValueError(f"cannot supersede missing memory id: {supersedes}")
-        return append_core_memory(self.v2_root, category=category, text=text, source=source, pinned=pinned, supersedes=supersedes)
+        path = append_core_memory(self.v2_root, category=category, text=text, source=source, pinned=pinned, supersedes=supersedes)
+        if pinned:
+            rebuild_agent_md(self.v2_root)
+        return path
 
     def forget(self, memory_id: str) -> bool:
-        return supersede_memory(self.v2_root, memory_id=memory_id)
+        success = supersede_memory(self.v2_root, memory_id=memory_id)
+        if success:
+            # Cheap pass over core/; ensures any pinned line we just superseded
+            # disappears from AGENT.md without waiting for the next ingest.
+            rebuild_agent_md(self.v2_root)
+        return success
 
     def session_note(self, session_id: str, text: str, category: str | None = None, importance: str = 'normal', source: str = 'agent') -> Path:
         return append_session_note(self.v2_root, session_id=session_id, text=text, category=category, importance=importance, source=source)

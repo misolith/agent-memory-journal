@@ -3,7 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from .hot import _has_metadata_flag, rebuild_agent_md
+from .hot import _has_metadata_flag, effective_hot_budget, rebuild_agent_md
+from .storage import extract_state
 from .promote import DEFAULT_MATCH_THRESHOLD, DEFAULT_OVERLAP_THRESHOLD, collect_candidates
 from .session import collect_session_candidates
 from .storage import init_memory_root
@@ -25,8 +26,14 @@ def _count_pinned_core_items(root: str | Path) -> int:
     count = 0
     for core_file in paths.core_dir.glob('*.md'):
         for line in core_file.read_text(encoding='utf-8', errors='ignore').splitlines():
-            if line.strip().startswith('- ') and _has_metadata_flag(line.strip(), 'pinned:true'):
-                count += 1
+            stripped = line.strip()
+            if not stripped.startswith('- '):
+                continue
+            if not _has_metadata_flag(stripped, 'pinned:true'):
+                continue
+            if extract_state(stripped) == 'superseded':
+                continue
+            count += 1
     return count
 
 
@@ -37,7 +44,8 @@ def review_state(root: str | Path) -> ReviewReport:
     episodic = collect_candidates(paths.root, match_threshold=DEFAULT_MATCH_THRESHOLD, overlap_threshold=DEFAULT_OVERLAP_THRESHOLD)
     session = collect_session_candidates(paths.root, match_threshold=DEFAULT_MATCH_THRESHOLD, overlap_threshold=DEFAULT_OVERLAP_THRESHOLD)
     repeated = sum(1 for item in episodic if item.distinct_days >= 2)
-    status = 'OK' if len(hot_text) <= 2048 else 'ISSUES_FOUND'
+    budget = effective_hot_budget(paths.config)
+    status = 'OK' if len(hot_text) <= budget else 'ISSUES_FOUND'
     return ReviewReport(
         status=status,
         episodic_candidates=len(episodic),

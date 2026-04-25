@@ -177,6 +177,29 @@ def init_memory_root(root: str | Path) -> MemoryPaths:
     return paths
 
 
+def _refresh_manifest_entry(paths: 'MemoryPaths', file_path: Path) -> None:
+    manifest_path = paths.index_dir / 'manifest.json'
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+        if not isinstance(manifest, dict):
+            manifest = {}
+    except Exception:
+        manifest = {}
+    manifest.setdefault('schema', 1)
+    manifest.setdefault('layout', 'agent-memory-v2')
+    tracked = manifest.get('core_sha256')
+    if not isinstance(tracked, dict):
+        tracked = {}
+        manifest['core_sha256'] = tracked
+    if not file_path.exists():
+        return
+    digest = hashlib.sha256(file_path.read_bytes()).hexdigest()
+    rel = str(file_path.relative_to(paths.root))
+    tracked[rel] = digest
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
+
+
 def _atomic_append(path: Path, text: str):
     path.parent.mkdir(parents=True, exist_ok=True)
     if not path.exists():
@@ -246,6 +269,7 @@ def append_core_memory(root: str | Path, category: str, text: str, source: str =
     if has_active_memory(target, item.id):
         return target
     _atomic_append(target, render_memory_item(item) + '\n')
+    _refresh_manifest_entry(paths, target)
     return target
 
 
@@ -302,5 +326,6 @@ def supersede_memory(root: str | Path, memory_id: str, new_state: str = 'superse
                 if os.path.exists(temp_path):
                     os.remove(temp_path)
                 raise
+            _refresh_manifest_entry(paths, core_file)
             break
     return found

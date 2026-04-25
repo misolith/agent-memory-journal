@@ -9,7 +9,7 @@ from pathlib import Path
 
 from .normalize import normalize_claim
 
-NORMALIZER_VERSION = 1
+NORMALIZER_VERSION = 2
 
 
 class BM25Index:

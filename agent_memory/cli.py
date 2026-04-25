@@ -4,13 +4,21 @@ import os
 import sys
 from pathlib import Path
 from datetime import datetime
+from importlib.metadata import PackageNotFoundError, version as _pkg_version
 from .api import Journal, LegacyJournal
 from .review import review_state
 from .doctor_v2 import doctor_verify
 from .migrate import import_legacy_workspace
 from .analytics import memory_stats, memory_topics, memory_cadence, memory_digest, extract_candidates
 from .promote import collect_candidates, DEFAULT_TRIGGERS
-from .episodic_recall import recall_episodic
+from .episodic_recall import recall_episodic, recall_recent
+
+
+def _resolve_version() -> str:
+    try:
+        return _pkg_version('agent-memory-journal')
+    except PackageNotFoundError:
+        return '0.0.0+dev'
 
 
 def parse_iso_date(value: str):
@@ -25,7 +33,7 @@ def main():
     ap.add_argument("--root", default=os.environ.get("AGENT_MEMORY_ROOT", "."), help="Memory root directory")
     ap.add_argument("--memory-dir", default="memory", help="Legacy memory directory")
     ap.add_argument("--long-file", default="MEMORY.md", help="Legacy long file")
-    ap.add_argument("--version", action="version", version="0.2.0")
+    ap.add_argument("--version", action="version", version=_resolve_version())
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     # Note command
@@ -176,7 +184,10 @@ def main():
         lines = extract_candidates(text, triggers=DEFAULT_TRIGGERS)
         print(json.dumps(lines, indent=2))
     elif args.cmd == "recent":
-        hits = recall_episodic(journal.v2_root, query=args.grep or "", k=100)
+        if args.grep:
+            hits = recall_episodic(journal.v2_root, query=args.grep, k=100)
+        else:
+            hits = recall_recent(journal.v2_root, days=args.days, k=100)
         if args.json:
             print(json.dumps([h.__dict__ for h in hits], indent=2))
         else:

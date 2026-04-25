@@ -8,8 +8,7 @@ from .bm25 import BM25Index
 import os
 import shutil
 import tempfile
-from datetime import datetime, timezone
-from .storage import split_claim_and_metadata, extract_id, utc_now_iso, extract_state
+from .storage import MemoryPaths, _refresh_manifest_entry, split_claim_and_metadata, utc_now_iso
 
 
 @dataclass
@@ -21,32 +20,50 @@ class CoreRecallHit:
     line_no: int
 
 
-def _update_last_seen(path_str: str, line_no: int):
-    path = Path(path_str)
-    if not path.exists():
-        return
-    lines = path.read_text(encoding='utf-8', errors='ignore').splitlines()
-    if line_no < 1 or line_no > len(lines):
-        return
-    line = lines[line_no - 1]
+def _stamp_line(line: str, timestamp: str) -> str:
     if 'last_seen:' in line:
-        new_line = re.sub(r'last_seen:[^\s\]]+', f'last_seen:{utc_now_iso()}', line)
-    else:
-        # Append last_seen before the closing bracket
-        if line.endswith(']'):
-            new_line = line[:-1] + f' last_seen:{utc_now_iso()}]'
-        else:
-            new_line = line + f' [last_seen:{utc_now_iso()}]'
-    lines[line_no - 1] = new_line
+        return re.sub(r'last_seen:[^\s\]]+', f'last_seen:{timestamp}', line)
+    if line.endswith(']'):
+        return line[:-1] + f' last_seen:{timestamp}]'
+    return line + f' [last_seen:{timestamp}]'
 
-    fd, temp_path = tempfile.mkstemp(dir=str(path.parent), prefix=path.name + ".tmp")
-    try:
-        with os.fdopen(fd, 'w', encoding='utf-8') as f:
-            f.write('\n'.join(lines).rstrip() + '\n')
-        shutil.move(temp_path, str(path))
-    except Exception:
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
+
+def _bulk_update_last_seen(root: Path, hits: list['CoreRecallHit']) -> None:
+    if not hits:
+        return
+    timestamp = utc_now_iso()
+    by_path: dict[str, list[int]] = {}
+    for hit in hits:
+        by_path.setdefault(hit.path, []).append(hit.line_no)
+    paths = MemoryPaths(root)
+    for path_str, line_nos in by_path.items():
+        target = Path(path_str)
+        if not target.exists():
+            continue
+        lines = target.read_text(encoding='utf-8', errors='ignore').splitlines()
+        touched = False
+        for line_no in line_nos:
+            if line_no < 1 or line_no > len(lines):
+                continue
+            new_line = _stamp_line(lines[line_no - 1], timestamp)
+            if new_line != lines[line_no - 1]:
+                lines[line_no - 1] = new_line
+                touched = True
+        if not touched:
+            continue
+        fd, temp_path = tempfile.mkstemp(dir=str(target.parent), prefix=target.name + '.tmp')
+        try:
+            with os.fdopen(fd, 'w', encoding='utf-8') as handle:
+                handle.write('\n'.join(lines).rstrip() + '\n')
+            shutil.move(temp_path, str(target))
+        except Exception:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+            continue
+        try:
+            _refresh_manifest_entry(paths, target)
+        except Exception:
+            pass
 
 
 def recall_core(root: str | Path, query: str, k: int = 5, update_last_seen: bool = True) -> list[CoreRecallHit]:
@@ -78,7 +95,7 @@ def recall_core(root: str | Path, query: str, k: int = 5, update_last_seen: bool
             meta.append((category, str(core_file), line_no))
     if not docs:
         return []
-    
+
     cache_path = root_path / 'index' / 'core_bm25.json'
     index = BM25Index.from_cache(cache_path, docs)
     scores = index.score(query)
@@ -90,6 +107,5 @@ def recall_core(root: str | Path, query: str, k: int = 5, update_last_seen: bool
     hits.sort(key=lambda item: (-item.score, item.category, item.line_no))
     results = hits[:k]
     if update_last_seen:
-        for hit in results:
-            _update_last_seen(hit.path, hit.line_no)
+        _bulk_update_last_seen(root_path, results)
     return results

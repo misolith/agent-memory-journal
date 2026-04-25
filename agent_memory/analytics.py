@@ -137,12 +137,12 @@ def memory_cadence(root: str | Path, days: int = 14, top_hours: int = 3, after_d
 
 
 def memory_digest(root: str | Path, days: int = 7, recent_limit: int = 5, top: int = 5, after_date=None, before_date=None):
-    stats = memory_stats(root, days=max(1, days), top=max(1, top))
-    cadence = memory_cadence(root, days=max(1, days), top_hours=max(1, min(top, 3)), after_date=after_date, before_date=before_date)
-    topics = memory_topics(root, days=max(1, days), top=max(1, top), samples=1, min_count=2, after_date=after_date, before_date=before_date)
-    # Simplified recent for now
-    from .episodic_recall import recall_episodic
-    recent = recall_episodic(init_memory_root(root).v2_root, query="", k=recent_limit)
+    paths = init_memory_root(root)
+    stats = memory_stats(paths.root, days=max(1, days), top=max(1, top))
+    cadence = memory_cadence(paths.root, days=max(1, days), top_hours=max(1, min(top, 3)), after_date=after_date, before_date=before_date)
+    topics = memory_topics(paths.root, days=max(1, days), top=max(1, top), samples=1, min_count=2, after_date=after_date, before_date=before_date)
+    from .episodic_recall import recall_recent
+    recent = recall_recent(paths.root, days=max(1, days), k=recent_limit)
     return {"days_scanned": days, "stats": stats, "cadence": cadence, "topics": topics, "recent": [r.__dict__ for r in recent]}
 
 
