@@ -14,12 +14,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate bundle inputs
+        run: |
+          test -f SKILL.md
+          test -f README.md
+          test -f agent_memory_journal.py
+          test -f docs/agent_install.md
+
       - name: Build skill bundle
         run: |
           rm -rf dist/agent-memory-journal-skill
-          mkdir -p dist/agent-memory-journal-skill/examples
-          cp SKILL.md agent_memory_journal.py README.md dist/agent-memory-journal-skill/
-          cp examples/agent-install.md examples/config.example.json dist/agent-memory-journal-skill/examples/
+          mkdir -p dist/agent-memory-journal-skill/docs
+          cp SKILL.md agent_memory_journal.py README.md CHANGELOG.md pyproject.toml dist/agent-memory-journal-skill/
+          cp -R agent_memory dist/agent-memory-journal-skill/
+          cp docs/agent_install.md dist/agent-memory-journal-skill/docs/
           cd dist
           zip -r agent-memory-journal-skill.zip agent-memory-journal-skill
 
