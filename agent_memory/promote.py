@@ -126,6 +126,9 @@ def promote_repeated_candidates(root: str | Path, min_distinct_days: int = 2, ma
             continue
         if candidate.distinct_days < min_distinct_days:
             continue
-        append_core_memory(root, category=candidate.category, text=candidate.text, source='auto')
+        try:
+            append_core_memory(root, category=candidate.category, text=candidate.text, source='auto')
+        except ValueError:
+            continue
         promoted.append(candidate)
     return promoted

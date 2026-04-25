@@ -16,6 +16,7 @@ def test_recall_core_finds_relevant_core_entries(tmp_path: Path):
     assert hits
     assert hits[0].category == 'capability'
     assert 'browser control' in hits[0].text.lower()
+    assert '[' not in hits[0].text
 
 
 def test_recall_core_ranks_overlap_above_irrelevant_entries(tmp_path: Path):

@@ -1,315 +1,44 @@
 # agent-memory-journal
 
-Durable episodic memory for agents — file-based, inspectable, and easy to review.
+Layered agent memory for hot, warm, and cold recall.
 
-`agent-memory-journal` helps keep daily notes, long-term memory, and compact review workflows in sync without requiring a database or external service. It is designed for agent setups that want durable memory with minimal moving parts.
+## Status
 
-Think of it as an agent's working journal: not just a fact store, but a durable record of what happened, what mattered, and what should be remembered.
+This branch is the v2 direction. The primary API is `agent_memory.Journal`, which targets the `.memory/` layout. Legacy `MEMORY.md` + `memory/YYYY-MM-DD.md` flows remain available through `LegacyJournal` and the old CLI during migration.
 
-## Why this exists
-
-Many agent workflows have the same failure mode:
-- useful facts are noticed but never written down
-- daily notes turn into noise
-- long-term memory becomes duplicated or bloated
-- recall is possible in theory but painful in practice
-
-`agent-memory-journal` is a pragmatic CLI for fixing that. It keeps memory in plain files, adds guardrails around duplication, and provides review commands that help turn recent logs into durable memory.
-
-## Current status
-
-The project is in stable alpha. The core CLI, review flow, promotion flow, and doctor/audit commands are in place and covered by tests. Current work is mostly maintenance, edge-case hardening, and documentation polish rather than major new feature development.
-
-## Core capabilities
-
-- append daily notes with duplicate protection
-- optionally append long-term memory bullets
-- search recent notes and long-term memory
-- show recent activity and memory cadence
-- surface recurring topics
-- generate compact operational digests
-- audit memory files for duplicate long-memory bullets and malformed daily note lines
-- optionally fail automation when memory audits detect issues via `doctor --strict`
-- suggest likely long-term memory candidates from recent daily notes
-- review candidates with related long-memory matches and copyable promotion commands
-- flag candidates already present in long-term memory and filter to pending-only review
-- extract memory-worthy lines from raw text
-
-## File layout
-
-By default the tool expects a memory root with this structure:
+## Layout
 
 ```text
-<root>/
-├── MEMORY.md
-└── memory/
-    ├── 2026-03-28.md
-    ├── 2026-03-29.md
-    └── 2026-03-30.md
+.memory/
+├── AGENT.md
+├── core/
+├── episodic/
+├── sessions/
+├── archive/core/
+└── index/
 ```
-
-### Daily note format
-
-Daily note entries are line-oriented and timestamped:
-
-```text
-- 08:15 Gmail watcher returned invalid_grant again.
-- 17:01 Added topics command to memory maintenance tooling.
-```
-
-### Long-term memory format
-
-`MEMORY.md` uses bullet points for durable facts, decisions, and policies:
-
-```text
-- Use use the app login path for live tee-time checks.
-- Keep Gmail monitoring out of heartbeat to avoid duplicate notifications.
-```
-
-## Installation
-
-For local development:
-
-```bash
-python3 -m venv .venv
-.venv/bin/pip install pytest
-```
-
-Install in a virtual environment or editable dev mode:
-
-```bash
-python3 -m venv .venv
-.venv/bin/pip install -e .
-agent-memory-journal --help
-```
-
-## Bootstrap a new memory root
-
-Initialize an empty memory root:
-
-```bash
-agent-memory-journal --root /path/to/root init
-```
-
-This creates:
-- `MEMORY.md`
-- `memory/`
-- optional starter config if `--with-config` is used
-
-## CLI usage
-
-### Add a note
-
-```bash
-python3 agent_memory_journal.py --root /path/to/workspace add --note "Remember to renew the PAT before Friday"
-```
-
-### Add a note to long-term memory too
-
-```bash
-python3 agent_memory_journal.py --root /path/to/workspace add --note "Use playing golf app path for live tee time checks" --long
-```
-
-### Show recent notes
-
-```bash
-python3 agent_memory_journal.py --root /path/to/workspace recent --days 2
-python3 agent_memory_journal.py --root /path/to/workspace recent --after 2026-03-30 --before 2026-03-30
-```
-
-### Search memory
-
-```bash
-python3 agent_memory_journal.py --root /path/to/workspace search --query "playing golf"
-```
-
-### Review recurring patterns
-
-```bash
-python3 agent_memory_journal.py --root /path/to/workspace topics --days 14
-python3 agent_memory_journal.py --root /path/to/workspace cadence --days 14
-python3 agent_memory_journal.py --root /path/to/workspace digest --days 7
-python3 agent_memory_journal.py --root /path/to/workspace doctor --days 14
-python3 agent_memory_journal.py --root /path/to/workspace doctor --days 14 --strict
-python3 agent_memory_journal.py --root /path/to/workspace doctor --days 30 --after 2026-04-01 --before 2026-04-07
-python3 agent_memory_journal.py --root /path/to/workspace candidates --days 7
-python3 agent_memory_journal.py --root /path/to/workspace candidates --days 7 --pending-only --json
-python3 agent_memory_journal.py --root /path/to/workspace candidates --days 30 --after 2026-04-01 --before 2026-04-07
-python3 agent_memory_journal.py --root /path/to/workspace review --days 7 --pending-only
-python3 agent_memory_journal.py --root /path/to/workspace review --days 7 --pending-only --context-lines 1
-python3 agent_memory_journal.py --root /path/to/workspace review --days 30 --after 2026-04-01 --before 2026-04-07
-python3 agent_memory_journal.py --root /path/to/workspace promote --ref 2026-03-30.md:12 --prefix-date
-python3 agent_memory_journal.py --root /path/to/workspace promote-candidates --days 7 --prefix-date
-```
-
-`review` now preserves any `--after/--before` bounds in its emitted `batch_promote` command, so a scoped review can be promoted without widening the window by accident.
-
-`review` now emits an aggregate `reason_counts` summary, an optional `source_context` excerpt around each candidate, and a ready-to-run `batch_promote` command when there are pending candidates, so operators can move from inspection to promotion without rebuilding the selection manually.
-
-All `--days` review windows are inclusive of today plus the prior N dates, so `--days 2` covers a three-date slice (today, yesterday, and the day before). That keeps review behavior aligned with normal operator expectations instead of trimming the oldest boundary date.
-
-### Extract likely memory-worthy lines from raw text
-
-```bash
-cat transcript.txt | python3 agent_memory_journal.py extract
-```
-
-## Configuration
-
-The tool resolves its root in this order:
-
-1. `--root /path/to/root`
-2. `AGENT_MEMORY_ROOT=/path/to/root`
-3. current working directory
-
-Optional path settings:
-
-- `--memory-dir memory`
-- `--long-file MEMORY.md`
-
-
-### Optional JSON config
-
-You can provide a config file with `--config-file` or place `agent-memory-journal.json` in the root.
-
-Example:
-
-```json
-{
-  "triggers": [
-    "\\bremember\\b",
-    "\\bdecision\\b",
-    "\\bfrom now on\\b"
-  ]
-}
-```
-
-The repository includes a starter file at `examples/config.example.json`.
-
-## Alpha contract (0.1.x)
-
-Stable for the alpha line:
-- file layout: `<root>/MEMORY.md` and `<root>/memory/YYYY-MM-DD.md`
-- commands: `add`, `extract`, `recent`, `search`, `stats`, `topics`, `cadence`, `digest`, `doctor`, `candidates`, `review`, `promote`, `promote-candidates`
-- `--root`, `--config-file`, `--json`, and `--version`
-- sentinel outputs such as `NO_MATCHES` and `NO_CANDIDATES`
-
-Intended for automation:
-- `recent --json`
-- `search --json`
-- `stats --json`
-- `topics --json`
-- `cadence --json`
-- `digest --json`
-- `doctor --json`
-- `doctor --strict` exits non-zero when issues are found, which makes cron or CI health checks fail loudly instead of relying on log parsing
-- `doctor --after/--before` narrows audits to exact daily windows, so historical cleanup and scoped automation do not over-scan unrelated notes
-- `candidates --json`
-- `review --json`
-
-Platform note:
-- current locking uses `fcntl`, so the alpha target is POSIX/Linux environments
-
-## Design goals
-
-- plain files, not a database
-- easy to inspect manually
-- safe against duplicate note spam
-- useful both for agents and humans
-- small enough to understand quickly
-
-
-## Agent-oriented setup
-
-If you want another agent to become productive from the repository URL alone, point it to:
-
-- `SKILL.md` for procedural usage
-- `examples/agent-install.md` for installation and first-run instructions
-
-The intended flow is: clone repo -> create venv -> run tests -> use CLI with `--root`.
-
-## Safety and platform notes
-
-- Use a memory root directory you control. Do **not** point `--root` at system directories or folders containing secrets.
-- The tool writes only under the selected root and creates `.agent_memory_journal.lock` there.
-- Current file locking uses `fcntl`, so the first public release targets POSIX/Linux environments.
-- Prefer passing `--root` explicitly in automation instead of relying on the working directory.
-
-## Testing
-
-Run tests with:
-
-```bash
-.venv/bin/pytest -q
-```
-
-Current coverage includes:
-- repo smoke checks
-- add + recent flow
-- long-memory dedupe
-- search flow
-- digest flow
-- temp-root execution
 
 ## Quick v2 examples
 
 ```python
 from agent_memory import Journal
-from agent_memory.core_recall import recall_core
-from agent_memory.ingest import ingest_cycle
 
 j = Journal(root='.')
-j.init_v2()
-j.note_v2('Decision: keep AGENT hot set tiny', category='decision', importance='high')
-j.remember_v2('AGENT.md must stay small and pinned-only', category='constraint', pinned=True)
+j.init()
+j.note('Decision: keep AGENT hot set tiny', category='decision', importance='high')
+j.remember('AGENT.md must stay small and pinned-only', category='constraint', pinned=True)
 j.session_note('review-42', 'Pinned detection is too loose', category='gotcha', importance='high')
 
-hits = recall_core('.memory', 'pinned hot set', k=5)
-report = ingest_cycle('.memory')
+hits = j.recall_core('pinned hot set', k=5)
+report = j.ingest()
 ```
 
-## Roadmap
+## Legacy compatibility
 
-Short-term:
-- keep maintenance-focused releases small and well-tested
-- improve help text and examples where they reduce operator friction
-- add narrowly targeted tests for bugs discovered in production use
-- clean up output contracts
-- package for easier installation
+If you still need the old file layout, use:
 
-Later:
-- decide whether the CLI name and internal engine naming should fully converge
-- publish a reusable skill/package around the standalone tool
-- consider importable Python API if it stays small and coherent
-
-## Repository layout
-
-```text
-agent-memory-journal/
-├── agent_memory_journal.py
-├── README.md
-├── LICENSE
-├── pyproject.toml
-├── .gitignore
-├── examples/
-│   └── quickstart.md
-└── tests/
-    ├── test_smoke.py
-    └── test_cli.py
+```python
+from agent_memory.api import LegacyJournal
+legacy = LegacyJournal(root='.')
+legacy.note('Old style note')
 ```
-
-## License
-
-MIT
-
-
-## Alpha release plan
-
-Target first public milestone: `0.1.0`.
-
-Release criteria:
-- standalone execution without workspace-specific paths
-- documented root/config model
-- green test suite
-- agent-facing setup instructions
-- stable CLI for add/recent/search/topics/cadence/digest/candidates/review/promote/promote-candidates

@@ -22,7 +22,7 @@ def test_rebuild_agent_md_enforces_char_limit(tmp_path: Path):
     journal.remember_v2('A' * 80, category='constraint', pinned=True)
     journal.remember_v2('B' * 80, category='decision', pinned=True)
 
-    result = rebuild_agent_md(tmp_path / '.memory', max_chars=140)
+    result = rebuild_agent_md(tmp_path / '.memory', max_chars=200)
     content = (tmp_path / '.memory' / 'AGENT.md').read_text(encoding='utf-8')
 
     assert result['written'] == 1

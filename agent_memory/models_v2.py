@@ -11,6 +11,7 @@ class MemoryItem:
     tier: str
     state: str
     source: str
+    created_at: str = ''
     pinned: bool = False
     supersedes: str | None = None
 
