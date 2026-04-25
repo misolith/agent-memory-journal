@@ -7,6 +7,13 @@ from pathlib import Path
 VALID_CATEGORIES = {"decision", "constraint", "gotcha", "preference", "capability"}
 
 
+def sanitize_session_id(session_id: str) -> str:
+    safe_session_id = ''.join(ch for ch in session_id if ch.isalnum() or ch in {'-', '_'})
+    if not safe_session_id:
+        raise ValueError('session_id must contain at least one safe character')
+    return safe_session_id
+
+
 @dataclass
 class MemoryPaths:
     root: Path
@@ -105,9 +112,7 @@ def append_core_memory(root: str | Path, category: str, text: str, source: str =
 
 def append_session_note(root: str | Path, session_id: str, text: str, category: str | None = None, importance: str = "normal", source: str = "agent") -> Path:
     paths = init_memory_root(root)
-    safe_session_id = ''.join(ch for ch in session_id if ch.isalnum() or ch in {'-', '_'})
-    if not safe_session_id:
-        raise ValueError('session_id must contain at least one safe character')
+    safe_session_id = sanitize_session_id(session_id)
     target = paths.sessions_dir / f"{safe_session_id}.md"
     now = datetime.now()
     suffix = []
