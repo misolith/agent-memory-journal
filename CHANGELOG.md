@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+- add agent installation guide for workspace embedding and CLI bootstrap
+- add `.memory/config.json` support for overriding the hot promotion target, header, and size limit
+- document how to promote pinned hot memory into files like root-level `AGENTS.md`
+
 ## 0.2.0 (2026-04-25)
 - **3-Tier Memory Architecture**: Implemented `.memory/` layout with Hot (`AGENT.md`), Warm (`core/`), and Cold (`episodic/`) tiers.
 - **Probabilistic Retrieval**: Replaced substring search with **BM25 ranking** for all recall operations.

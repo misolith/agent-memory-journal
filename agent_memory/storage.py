@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 import os
 import shutil
@@ -85,13 +86,36 @@ def render_memory_item(item: MemoryItem) -> str:
     return f"- {item.text} [{' '.join(flags)}]"
 
 
+def _load_memory_config(root: Path) -> dict:
+    config_path = root / 'config.json'
+    if not config_path.exists():
+        return {}
+    try:
+        data = json.loads(config_path.read_text(encoding='utf-8'))
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
 @dataclass
 class MemoryPaths:
     root: Path
 
     @property
+    def config_file(self) -> Path:
+        return self.root / 'config.json'
+
+    @property
+    def config(self) -> dict:
+        return _load_memory_config(self.root)
+
+    @property
     def hot_file(self) -> Path:
-        return self.root / 'AGENT.md'
+        hot_path = self.config.get('hot_path', 'AGENT.md')
+        candidate = Path(hot_path)
+        if candidate.is_absolute():
+            return candidate
+        return self.root / candidate
 
     @property
     def episodic_dir(self) -> Path:
@@ -135,8 +159,16 @@ def init_memory_root(root: str | Path) -> MemoryPaths:
     paths.sessions_dir.mkdir(parents=True, exist_ok=True)
     paths.archive_core_dir.mkdir(parents=True, exist_ok=True)
     paths.index_dir.mkdir(parents=True, exist_ok=True)
+    if not paths.config_file.exists():
+        paths.config_file.write_text(json.dumps({
+            'hot_path': 'AGENT.md',
+            'hot_header': '# AGENT.md',
+            'hot_max_chars': 2048
+        }, indent=2) + '\n', encoding='utf-8')
     if not paths.hot_file.exists():
-        paths.hot_file.write_text('# AGENT.md\n\n', encoding='utf-8')
+        paths.hot_file.parent.mkdir(parents=True, exist_ok=True)
+        header = paths.config.get('hot_header', '# AGENT.md')
+        paths.hot_file.write_text(f'{header}\n\n', encoding='utf-8')
     for category in sorted(VALID_CATEGORIES):
         target = paths.core_file(category)
         if not target.exists():

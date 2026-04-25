@@ -22,5 +22,13 @@ Manage and retrieve long-term memory using a 3-tier structure (Hot, Warm, Cold).
 
 1.  **Episodic first**: Use `note` for observations.
 2.  **Explicit curation**: Use `remember` for facts that must persist.
-3.  **Atomic pinning**: Use `--pinned` for items that MUST be in `AGENT.md`.
+3.  **Atomic pinning**: Use `--pinned` for items that MUST be in the configured hot file.
 4.  **Verification**: Run `doctor` periodically to ensure integrity.
+
+## Agent installation
+
+See `docs/agent_install.md` for:
+- workspace installation
+- CLI symlink setup
+- startup contract for agents
+- hot promotion target override via `.memory/config.json`
