@@ -1,44 +1,58 @@
-# agent-memory-journal
+# Agent Memory Journal V2 (Zeus)
 
-Layered agent memory for hot, warm, and cold recall.
+A robust 3-tier memory system for autonomous agents.
 
-## Status
+## Features
 
-This branch is the v2 direction. The primary API is `agent_memory.Journal`, which targets the `.memory/` layout. Legacy `MEMORY.md` + `memory/YYYY-MM-DD.md` flows remain available through `LegacyJournal` and the old CLI during migration.
+- **3-Tier Storage**:
+    - **Hot** (`AGENT.md`): Pinned items always in context.
+    - **Warm** (`core/`): Curated long-term memories (decisions, constraints, etc.).
+    - **Cold** (`episodic/`): Daily logs of events and observations.
+- **Probabilistic Recall**: Uses BM25 for ranked retrieval across all tiers.
+- **Weighted Search**: Warm memories outrank episodic logs.
+- **Autonomous Promotion**: Repeated episodic notes are automatically promoted to Core.
+- **Integrity Checks**: Manifest-based verification of memory files.
+- **Safety**: Built-in sanitation and prompt-injection defense for Core memories.
 
-## Layout
+## Installation
 
-```text
-.memory/
-├── AGENT.md
-├── core/
-├── episodic/
-├── sessions/
-├── archive/core/
-└── index/
+```bash
+pip install .
 ```
 
-## Quick v2 examples
+## CLI Usage
+
+```bash
+# Add a daily note
+agent-memory-journal note "Miso prefers dark mode" --category preference
+
+# Add a core constraint (pinned to AGENT.md)
+agent-memory-journal remember "Never use public wifi" --category constraint --pinned
+
+# Search all tiers
+agent-memory-journal search --query "preferences"
+
+# Mark a memory as superseded
+agent-memory-journal forget dec-1234567890
+
+# Integrity check
+agent-memory-journal doctor --strict
+```
+
+## API Usage
 
 ```python
 from agent_memory import Journal
 
-j = Journal(root='.')
+j = Journal(root="~/.memory")
 j.init()
-j.note('Decision: keep AGENT hot set tiny', category='decision', importance='high')
-j.remember('AGENT.md must stay small and pinned-only', category='constraint', pinned=True)
-j.session_note('review-42', 'Pinned detection is too loose', category='gotcha', importance='high')
 
-hits = j.recall_core('pinned hot set', k=5)
-report = j.ingest()
-```
+# Store episodic memory
+j.note("User mentioned Arc Raiders interest")
 
-## Legacy compatibility
+# Search (Warm hits weighted 1.5x)
+hits = j.recall("games")
 
-If you still need the old file layout, use:
-
-```python
-from agent_memory.api import LegacyJournal
-legacy = LegacyJournal(root='.')
-legacy.note('Old style note')
+# Promote candidates & rebuild AGENT.md
+j.ingest()
 ```

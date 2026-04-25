@@ -1,24 +1,26 @@
----
-name: agent-memory-journal
-description: Layered agent memory for hot, warm, and cold recall. Use the v2 Python API by default. Use LegacyJournal only when explicitly working with old MEMORY.md + memory/YYYY-MM-DD.md layouts.
----
+# Skill: Agent Memory Journal
 
-# Agent Memory Journal
+Manage and retrieve long-term memory using a 3-tier structure (Hot, Warm, Cold).
 
-## V2 usage direction
+## Tools
 
-Prefer the importable Python API over shelling out to the CLI when integrating with an agent.
+- `agent-memory-journal note <text>`: Add episodic note.
+- `agent-memory-journal remember <text> --category <cat>`: Add core memory.
+- `agent-memory-journal search --query <q>`: Search memory.
+- `agent-memory-journal forget <id>`: Supersede a memory.
+- `agent-memory-journal ingest`: Run promotion and rebuild cycle.
 
-Recommended flow:
-- initialize `.memory/` with `Journal.init()`
-- write episodic notes with `note(...)`
-- write pinned durable constraints with `remember(...)`
-- record review-loop findings with `session_note(...)` or `review_memory.log_review_findings(...)`
-- run promotion and rebuild with `ingest()`
-- query durable warm memory with `recall_core(...)`
+## Core Categories
 
-## Legacy compatibility
+- `decision`: Strategic choices.
+- `constraint`: Hard rules or limitations.
+- `gotcha`: Lessons learned or bugs.
+- `preference`: User or agent preferences.
+- `capability`: New skills or tools.
 
-For old layout migrations:
-- use `LegacyJournal`
-- or run `python3 agent_memory_journal.py ...` directly
+## Guidelines
+
+1.  **Episodic first**: Use `note` for observations.
+2.  **Explicit curation**: Use `remember` for facts that must persist.
+3.  **Atomic pinning**: Use `--pinned` for items that MUST be in `AGENT.md`.
+4.  **Verification**: Run `doctor` periodically to ensure integrity.

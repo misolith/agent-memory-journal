@@ -45,6 +45,10 @@ def main():
     r.add_argument("--category", required=True)
     r.add_argument("--pinned", action="store_true")
 
+    # Forget command
+    f = sub.add_parser("forget", help="Supersede a core memory by ID")
+    f.add_argument("id")
+
     # Ingest command
     sub.add_parser("ingest", help="Run ingestion cycle (promote & rebuild)")
 
@@ -123,6 +127,12 @@ def main():
     elif args.cmd == "remember":
         path = journal.remember(args.text, category=args.category, pinned=args.pinned)
         print(f"Memory remembered in {path}")
+    elif args.cmd == "forget":
+        success = journal.forget(args.id)
+        if success:
+            print(f"Memory {args.id} superseded.")
+        else:
+            print(f"Memory {args.id} not found.")
     elif args.cmd == "ingest":
         report = journal.ingest()
         print(json.dumps(report.__dict__ if hasattr(report, "__dict__") else report, indent=2))

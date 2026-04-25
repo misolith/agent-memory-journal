@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import hashlib
 import re
+import os
+import shutil
+import tempfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -143,6 +146,28 @@ def init_memory_root(root: str | Path) -> MemoryPaths:
     return paths
 
 
+def _atomic_append(path: Path, text: str):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if not path.exists():
+        path.write_text(text, encoding='utf-8')
+        return
+
+    # Use a temporary file to prevent corruption during concurrent writes
+    fd, temp_path = tempfile.mkstemp(dir=str(path.parent), prefix=path.name + ".tmp")
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as f:
+            # Copy existing content
+            f.write(path.read_text(encoding='utf-8', errors='ignore'))
+            # Append new text
+            f.write(text)
+        # Atomically replace the original file
+        shutil.move(temp_path, str(path))
+    except Exception:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        raise
+
+
 def append_episodic_note(root: str | Path, text: str, category: str | None = None, importance: str = 'normal', source: str = 'agent') -> Path:
     paths = init_memory_root(root)
     now = datetime.now(timezone.utc)
@@ -156,8 +181,7 @@ def append_episodic_note(root: str | Path, text: str, category: str | None = Non
     if source:
         suffix.append(f'source:{source}')
     trailer = f" [{' '.join(suffix)}]" if suffix else ''
-    with path.open('a', encoding='utf-8') as handle:
-        handle.write(f"- {now.strftime('%H:%M')} {cleaned}{trailer}\n")
+    _atomic_append(path, f"- {now.strftime('%H:%M')} {cleaned}{trailer}\n")
     return path
 
 
@@ -178,8 +202,7 @@ def append_core_memory(root: str | Path, category: str, text: str, source: str =
     )
     if has_active_memory(target, item.id):
         return target
-    with target.open('a', encoding='utf-8') as handle:
-        handle.write(render_memory_item(item) + '\n')
+    _atomic_append(target, render_memory_item(item) + '\n')
     return target
 
 
@@ -197,6 +220,44 @@ def append_session_note(root: str | Path, session_id: str, text: str, category: 
     if source:
         suffix.append(f'source:{source}')
     trailer = f" [{' '.join(suffix)}]" if suffix else ''
-    with target.open('a', encoding='utf-8') as handle:
-        handle.write(f"- {now.strftime('%H:%M')} {cleaned}{trailer}\n")
+    _atomic_append(target, f"- {now.strftime('%H:%M')} {cleaned}{trailer}\n")
     return target
+
+
+def supersede_memory(root: str | Path, memory_id: str, new_state: str = 'superseded') -> bool:
+    paths = init_memory_root(root)
+    found = False
+    for core_file in paths.core_dir.glob('*.md'):
+        content = core_file.read_text(encoding='utf-8', errors='ignore')
+        if f'id:{memory_id}' not in content:
+            continue
+
+        new_lines = []
+        lines = content.splitlines()
+        for line in lines:
+            if not line.strip().startswith('- '):
+                new_lines.append(line)
+                continue
+
+            current_id = extract_id(line)
+            if current_id == memory_id:
+                # Update state:active -> state:superseded
+                new_line = re.sub(r'state:[^\s\]]+', f'state:{new_state}', line)
+                new_lines.append(new_line)
+                found = True
+            else:
+                new_lines.append(line)
+
+        if found:
+            # Atomic rewrite
+            fd, temp_path = tempfile.mkstemp(dir=str(core_file.parent), prefix=core_file.name + ".tmp")
+            try:
+                with os.fdopen(fd, 'w', encoding='utf-8') as f:
+                    f.write('\n'.join(new_lines).rstrip() + '\n')
+                shutil.move(temp_path, str(core_file))
+            except Exception:
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+                raise
+            break
+    return found

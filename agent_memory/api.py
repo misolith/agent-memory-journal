@@ -9,7 +9,7 @@ from .ingest import ingest_cycle
 from .models import RecallResult
 from .normalize import token_counter
 from .review_memory import log_review_findings
-from .storage import append_core_memory, append_episodic_note, append_session_note, init_memory_root
+from .storage import append_core_memory, append_episodic_note, append_session_note, init_memory_root, supersede_memory
 
 
 class LegacyJournal:
@@ -72,7 +72,15 @@ class Journal:
             return recall_episodic(self.v2_root, query=query, k=k)
         if tier == 'all':
             warm_hits = self.recall_core(query, k=max(1, k))
+            # Weight warm hits higher (e.g. 1.5x)
+            for h in warm_hits:
+                h.score *= 1.5
+                h.tier = 'warm'
+
             cold_hits = recall_episodic(self.v2_root, query=query, k=max(1, k))
+            for h in cold_hits:
+                h.tier = 'cold'
+
             merged = list(warm_hits) + list(cold_hits)
             merged.sort(key=lambda item: (-item.score, getattr(item, 'path', ''), getattr(item, 'line_no', 0)))
             return merged[: max(1, k)]
@@ -83,6 +91,9 @@ class Journal:
 
     def remember(self, text: str, category: str, source: str = 'agent', pinned: bool = False, supersedes: str | None = None) -> Path:
         return append_core_memory(self.v2_root, category=category, text=text, source=source, pinned=pinned, supersedes=supersedes)
+
+    def forget(self, memory_id: str) -> bool:
+        return supersede_memory(self.v2_root, memory_id=memory_id)
 
     def session_note(self, session_id: str, text: str, category: str | None = None, importance: str = 'normal', source: str = 'agent') -> Path:
         return append_session_note(self.v2_root, session_id=session_id, text=text, category=category, importance=importance, source=source)
