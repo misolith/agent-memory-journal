@@ -122,4 +122,8 @@ You can override that in `.memory/config.json`:
 }
 ```
 
+`hot_max_chars` is currently a **character budget**, not a token budget.
+That choice is intentional for now to avoid adding a tokenizer dependency like `tiktoken`.
+A token-aware limit may be added later, but today the implementation enforces chars only.
+
 This is useful when an agent framework expects a root-level memory file like `AGENTS.md`.

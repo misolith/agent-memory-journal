@@ -64,6 +64,9 @@ You can override that by editing `.memory/config.json`.
 }
 ```
 
+`hot_max_chars` is enforced as a **character limit**.
+It is not token-aware yet. That is a deliberate tradeoff so the project stays dependency-light for now.
+
 ### Example: promote hot memory to workspace root `AGENTS.md`
 
 ```json
@@ -75,6 +78,11 @@ You can override that by editing `.memory/config.json`.
 ```
 
 This makes `ingest` and `rebuild_agent_md()` write the pinned hot set into the workspace root `AGENTS.md` instead of `.memory/AGENT.md`.
+
+## Future enhancement
+
+A later version may support a tokenizer-backed limit like `hot_max_tokens`, but that is not implemented yet.
+Until then, document and treat the hot budget as chars, not tokens.
 
 ## Recommended pattern
 
