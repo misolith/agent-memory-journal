@@ -28,8 +28,10 @@ def tokenize(text: str) -> list[str]:
 
 
 def normalize_claim(text: str) -> tuple[str, list[str]]:
+    # Remove metadata brackets before tokenizing
+    clean_text = re.sub(r"\s+\[.*\]\s*$", "", text)
     tokens = []
-    for token in tokenize(text):
+    for token in tokenize(clean_text):
         stemmed = simple_stem(token)
         if stemmed in STOP_WORDS:
             continue

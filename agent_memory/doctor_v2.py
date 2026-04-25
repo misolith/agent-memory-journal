@@ -39,10 +39,10 @@ def refresh_manifest(root: str | Path) -> dict[str, object]:
     return manifest
 
 
-def doctor_verify(root: str | Path) -> DoctorReport:
+def doctor_verify(root: str | Path, fix: bool = False) -> DoctorReport:
     paths = init_memory_root(root)
     manifest_path = paths.index_dir / 'manifest.json'
-    if not manifest_path.exists():
+    if not manifest_path.exists() or fix:
         refresh_manifest(paths.root)
 
     mismatches: list[str] = []

@@ -1,1 +1,11 @@
-{"schema":1,"layout":"agent-memory-v2"}
+{
+  "schema": 1,
+  "layout": "agent-memory-v2",
+  "core_sha256": {
+    "core/capabilities.md": "bb1fd8056ad42dd1bd4c2a0c21a4866d2afe667c97a84bde48e6caaa816eb07e",
+    "core/constraints.md": "2aac960274372fdf9ae57f733b45979ae92750380b501c0914e4ac7fcfb9b82a",
+    "core/decisions.md": "36070eb2d7b77f191a57eacfcfe57b0f373028947ea0bc036d68f187525a4df6",
+    "core/gotchas.md": "0253f71d1b62604f1520459d9c3d001a5ba5352b0e362e5787bd85d87adeb116",
+    "core/preferences.md": "8c47536b2ee0ef1b9ea83cfe7843db7aaef2697224b58c0033169934ed841eee"
+  }
+}

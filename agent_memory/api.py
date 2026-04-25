@@ -67,21 +67,53 @@ class Journal:
 
     def recall(self, query: str, k: int = 5, tier: str = 'all'):
         if tier == 'warm':
-            return self.recall_core(query, k=k)
+            hits = self.recall_core(query, k=k)
+            return [
+                RecallResult(
+                    text=h.text,
+                    path=h.path,
+                    line_no=h.line_no,
+                    score=h.score,
+                    tier='warm',
+                    category=h.category
+                ) for h in hits
+            ]
         if tier == 'cold':
-            return recall_episodic(self.v2_root, query=query, k=k)
+            hits = recall_episodic(self.v2_root, query=query, k=k)
+            return [
+                RecallResult(
+                    text=h.text,
+                    path=h.path,
+                    line_no=h.line_no,
+                    score=h.score,
+                    tier='cold'
+                ) for h in hits
+            ]
         if tier == 'all':
             warm_hits = self.recall_core(query, k=max(1, k))
-            # Weight warm hits higher (e.g. 1.5x)
-            for h in warm_hits:
-                h.score *= 1.5
-                h.tier = 'warm'
+            warm_results = [
+                RecallResult(
+                    text=h.text,
+                    path=h.path,
+                    line_no=h.line_no,
+                    score=h.score * 1.5,
+                    tier='warm',
+                    category=h.category
+                ) for h in warm_hits
+            ]
 
             cold_hits = recall_episodic(self.v2_root, query=query, k=max(1, k))
-            for h in cold_hits:
-                h.tier = 'cold'
+            cold_results = [
+                RecallResult(
+                    text=h.text,
+                    path=h.path,
+                    line_no=h.line_no,
+                    score=h.score,
+                    tier='cold'
+                ) for h in cold_hits
+            ]
 
-            merged = list(warm_hits) + list(cold_hits)
+            merged = warm_results + cold_results
             merged.sort(key=lambda item: (-item.score, getattr(item, 'path', ''), getattr(item, 'line_no', 0)))
             return merged[: max(1, k)]
         return []
@@ -100,8 +132,8 @@ class Journal:
     def session_note(self, session_id: str, text: str, category: str | None = None, importance: str = 'normal', source: str = 'agent') -> Path:
         return append_session_note(self.v2_root, session_id=session_id, text=text, category=category, importance=importance, source=source)
 
-    def recall_core(self, query: str, k: int = 5):
-        return recall_core(self.v2_root, query=query, k=k)
+    def recall_core(self, query: str, k: int = 5, update_last_seen: bool = True):
+        return recall_core(self.v2_root, query=query, k=k, update_last_seen=update_last_seen)
 
     def ingest(self):
         return ingest_cycle(self.v2_root)

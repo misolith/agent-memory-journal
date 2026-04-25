@@ -13,7 +13,7 @@ The system organizes memory into three tiers to balance immediate context availa
 2.  **Warm Memory (`core/`)**:
     *   **Structured facts**: Categorized into `decisions`, `constraints`, `gotchas`, `preferences`, and `capabilities`.
     *   **BM25 Searchable**: Retrieved on-demand using probabilistic ranking.
-    *   **Metadata-rich**: Each item has a stable ID, state (active/superseded), and provenance.
+    *   **Metadata-rich**: Each item has a stable ID, state (active/superseded), creation timestamp, and `last_seen` tracking.
 3.  **Cold Archive (`episodic/`)**:
     *   **Raw logs**: Daily chronological record of events and observations.
     *   **Source evidence**: Used for autonomous promotion and auditing.
@@ -38,6 +38,7 @@ agent-memory-journal remember "Never use public wifi for sensitive ops" --catego
 ### Retrieval and Maintenance
 ```bash
 # Search across all tiers (Core hits are weighted 1.5x)
+# This also updates 'last_seen' metadata for retrieved core hits.
 agent-memory-journal search --query "network safety"
 
 # Supersede an outdated memory

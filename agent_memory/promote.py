@@ -73,6 +73,15 @@ def _counter_overlap_ratio(a: str, b: str) -> float:
     return overlap / denom
 
 
+def _guess_category(text: str) -> str | None:
+    from .migrate import CATEGORY_HINTS
+    lowered = text.lower()
+    for needle, category in CATEGORY_HINTS.items():
+        if needle in lowered:
+            return category
+    return None
+
+
 def collect_candidates(root: str | Path, match_threshold: float = DEFAULT_MATCH_THRESHOLD, overlap_threshold: float = DEFAULT_OVERLAP_THRESHOLD) -> list[Candidate]:
     groups: list[dict] = []
     for entry in iter_episodic_entries(root):
@@ -81,15 +90,18 @@ def collect_candidates(root: str | Path, match_threshold: float = DEFAULT_MATCH_
             continue
         matched_group = None
         for group in groups:
+            # Semantic deduplication logic: combined Jaccard and Token Overlap
             if claims_match(group['representative'], entry['text'], threshold=match_threshold) or _counter_overlap_ratio(group['representative'], entry['text']) >= overlap_threshold:
                 matched_group = group
                 break
         if not matched_group:
+            # New candidate discovery
+            guessed_cat = _guess_category(entry['text'])
             matched_group = {
                 'representative': entry['text'],
                 'normalized_claim': normalized,
                 'tokens': tokens,
-                'category': entry['category'],
+                'category': entry['category'] or guessed_cat,
                 'importance': entry['importance'],
                 'source': entry['source'],
                 'refs': [],

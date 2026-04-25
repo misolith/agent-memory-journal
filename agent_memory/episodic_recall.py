@@ -34,7 +34,10 @@ def recall_episodic(root: str | Path, query: str, k: int = 5) -> list[EpisodicRe
             meta.append((str(daily_file), line_no))
     if not docs:
         return []
-    index = BM25Index(docs)
+    
+    root_path = Path(root).expanduser().resolve()
+    cache_path = root_path / 'index' / 'episodic_bm25.json'
+    index = BM25Index.from_cache(cache_path, docs)
     scores = index.score(query)
     hits = [
         EpisodicRecallHit(text=doc, path=path, score=score, line_no=line_no)

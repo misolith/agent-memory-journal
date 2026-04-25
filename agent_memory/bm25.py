@@ -3,6 +3,10 @@ from __future__ import annotations
 import math
 from collections import Counter
 
+import json
+import hashlib
+from pathlib import Path
+
 from .normalize import normalize_claim
 
 
@@ -16,6 +20,43 @@ class BM25Index:
         self.doc_lens = [len(tokens) for tokens in self.doc_tokens]
         self.avgdl = sum(self.doc_lens) / len(self.doc_lens) if self.doc_lens else 0.0
         self.idf = self._build_idf()
+
+    @classmethod
+    def from_cache(cls, cache_path: Path, docs: list[str], k1: float = 1.5, b: float = 0.75):
+        # Hash docs to see if cache is valid
+        docs_hash = hashlib.sha256("\n".join(docs).encode("utf-8")).hexdigest()
+        if cache_path.exists():
+            try:
+                data = json.loads(cache_path.read_text(encoding="utf-8"))
+                if data.get("hash") == docs_hash:
+                    instance = cls.__new__(cls)
+                    instance.docs = docs
+                    instance.k1 = k1
+                    instance.b = b
+                    instance.doc_tokens = data["doc_tokens"]
+                    instance.doc_freqs = [Counter(d) for d in data["doc_freqs"]]
+                    instance.doc_lens = data["doc_lens"]
+                    instance.avgdl = data["avgdl"]
+                    instance.idf = data["idf"]
+                    return instance
+            except Exception:
+                pass
+        
+        instance = cls(docs, k1, b)
+        # Save to cache
+        try:
+            cache_path.parent.mkdir(parents=True, exist_ok=True)
+            cache_path.write_text(json.dumps({
+                "hash": docs_hash,
+                "doc_tokens": instance.doc_tokens,
+                "doc_freqs": [dict(f) for f in instance.doc_freqs],
+                "doc_lens": instance.doc_lens,
+                "avgdl": instance.avgdl,
+                "idf": instance.idf
+            }), encoding="utf-8")
+        except Exception:
+            pass
+        return instance
 
     def _build_idf(self) -> dict[str, float]:
         df = Counter()

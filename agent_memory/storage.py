@@ -76,6 +76,8 @@ def render_memory_item(item: MemoryItem) -> str:
         f'source:{item.source}',
         f'created:{item.created_at}',
     ]
+    if item.last_seen:
+        flags.append(f'last_seen:{item.last_seen}')
     if item.pinned:
         flags.append('pinned:true')
     if item.supersedes:
@@ -189,6 +191,17 @@ def append_core_memory(root: str | Path, category: str, text: str, source: str =
     paths = init_memory_root(root)
     target = paths.core_file(category)
     cleaned = require_safe_memory_text(text)
+
+    if supersedes:
+        # Validate that the supersedes ID actually exists
+        found_target = False
+        for core_file in paths.core_dir.glob('*.md'):
+            if f'id:{supersedes}' in core_file.read_text(encoding='utf-8', errors='ignore'):
+                found_target = True
+                break
+        if not found_target:
+            raise ValueError(f"supersedes ID '{supersedes}' not found in core memory")
+
     item = MemoryItem(
         id=make_memory_id(category, cleaned),
         text=cleaned,
@@ -197,6 +210,7 @@ def append_core_memory(root: str | Path, category: str, text: str, source: str =
         state=state,
         source=source,
         created_at=utc_now_iso(),
+        last_seen=utc_now_iso(),
         pinned=pinned,
         supersedes=supersedes,
     )

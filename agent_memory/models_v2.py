@@ -12,6 +12,7 @@ class MemoryItem:
     state: str
     source: str
     created_at: str = ''
+    last_seen: str = ''
     pinned: bool = False
     supersedes: str | None = None
 
