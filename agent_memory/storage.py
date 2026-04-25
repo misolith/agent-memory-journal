@@ -100,3 +100,24 @@ def append_core_memory(root: str | Path, category: str, text: str, source: str =
     with target.open("a", encoding="utf-8") as handle:
         handle.write(f"- {text.strip()} [{' '.join(flags)}]\n")
     return target
+
+
+
+def append_session_note(root: str | Path, session_id: str, text: str, category: str | None = None, importance: str = "normal", source: str = "agent") -> Path:
+    paths = init_memory_root(root)
+    safe_session_id = ''.join(ch for ch in session_id if ch.isalnum() or ch in {'-', '_'})
+    if not safe_session_id:
+        raise ValueError('session_id must contain at least one safe character')
+    target = paths.sessions_dir / f"{safe_session_id}.md"
+    now = datetime.now()
+    suffix = []
+    if category:
+        suffix.append(f"category:{category}")
+    if importance != "normal":
+        suffix.append(f"importance:{importance}")
+    if source:
+        suffix.append(f"source:{source}")
+    trailer = f" [{' '.join(suffix)}]" if suffix else ""
+    with target.open('a', encoding='utf-8') as handle:
+        handle.write(f"- {now.strftime('%H:%M')} {text.strip()}{trailer}\n")
+    return target

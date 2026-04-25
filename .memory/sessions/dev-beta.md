@@ -1,0 +1,1 @@
+- 08:42 Repeated constraints across runs should be supported by session-scoped notes [category:constraint importance:high source:agent]

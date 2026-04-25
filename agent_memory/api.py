@@ -5,7 +5,7 @@ from typing import Iterable
 
 from .models import RecallResult
 from .normalize import token_counter
-from .storage import append_core_memory, append_episodic_note, init_memory_root
+from .storage import append_core_memory, append_episodic_note, append_session_note, init_memory_root
 
 
 class Journal:
@@ -55,6 +55,9 @@ class Journal:
 
     def remember_v2(self, text: str, category: str, source: str = "agent", pinned: bool = False) -> Path:
         return append_core_memory(self.v2_root, category=category, text=text, source=source, pinned=pinned)
+
+    def session_note(self, session_id: str, text: str, category: str | None = None, importance: str = "normal", source: str = "agent") -> Path:
+        return append_session_note(self.v2_root, session_id=session_id, text=text, category=category, importance=importance, source=source)
 
     def _scan_file(self, path: Path, query: str, tier: str) -> Iterable[RecallResult]:
         for line_no, line in enumerate(path.read_text(encoding="utf-8", errors="ignore").splitlines(), start=1):
