@@ -5,6 +5,7 @@ from typing import Iterable
 
 from .models import RecallResult
 from .normalize import token_counter
+from .storage import append_core_memory, append_episodic_note, init_memory_root
 
 
 class Journal:
@@ -18,6 +19,7 @@ class Journal:
         self.root = Path(root).expanduser().resolve()
         self.long_file = self.root / "MEMORY.md"
         self.daily_dir = self.root / "memory"
+        self.v2_root = self.root / ".memory"
 
     def recall(self, query: str, k: int = 5, tier: str = "all") -> list[RecallResult]:
         q = query.lower().strip()
@@ -30,7 +32,7 @@ class Journal:
         results.sort(key=lambda item: (-item.score, item.path, item.line_no))
         return results[: max(1, k)]
 
-    def note(self, text: str, category: str | None = None, importance: str = "normal") -> Path:
+    def note(self, text: str, category: str | None = None, importance: str = "normal", source: str = "agent") -> Path:
         self.daily_dir.mkdir(parents=True, exist_ok=True)
         from datetime import datetime
 
@@ -44,6 +46,15 @@ class Journal:
         with path.open("a", encoding="utf-8") as handle:
             handle.write(f"- {ts} {text.strip()}{suffix}\n")
         return path
+
+    def init_v2(self) -> Path:
+        return init_memory_root(self.v2_root).root
+
+    def note_v2(self, text: str, category: str | None = None, importance: str = "normal", source: str = "agent") -> Path:
+        return append_episodic_note(self.v2_root, text=text, category=category, importance=importance, source=source)
+
+    def remember_v2(self, text: str, category: str, source: str = "agent", pinned: bool = False) -> Path:
+        return append_core_memory(self.v2_root, category=category, text=text, source=source, pinned=pinned)
 
     def _scan_file(self, path: Path, query: str, tier: str) -> Iterable[RecallResult]:
         for line_no, line in enumerate(path.read_text(encoding="utf-8", errors="ignore").splitlines(), start=1):
