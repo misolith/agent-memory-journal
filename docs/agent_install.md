@@ -2,6 +2,21 @@
 
 This project is designed to be embedded into an agent workspace.
 
+## Primary integration surface
+
+The primary integration surface is the Python `Journal` API.
+
+```python
+from agent_memory import Journal
+
+j = Journal(root=".")
+j.init()
+j.note("Observed a durable preference")
+hits = j.recall("preference")
+```
+
+Use the CLI only as a convenience layer for shell workflows, cron jobs, and manual operations.
+
 ## Default installation
 
 1. Clone the repository into the workspace:
@@ -10,16 +25,27 @@ This project is designed to be embedded into an agent workspace.
 git clone git@github.com:misolith/agent-memory-journal.git skills/agent-memory
 ```
 
-2. Expose the CLI in the workspace:
+2. Ensure the Python package is importable by the agent runtime.
+
+Examples:
+- install it into the runtime environment with `pip install .`
+- or add the repository root to `PYTHONPATH`
+
+3. Initialize memory in the workspace root.
+
+Python-first:
+
+```python
+from agent_memory import Journal
+j = Journal(root=".")
+j.init()
+```
+
+Optional CLI path:
 
 ```bash
 ln -sf "$PWD/skills/agent-memory/agent_memory_journal.py" "$PWD/bin/agent-memory-journal"
 chmod +x "$PWD/skills/agent-memory/agent_memory_journal.py"
-```
-
-3. Initialize memory in the workspace root:
-
-```bash
 agent-memory-journal --root "$PWD" init
 ```
 

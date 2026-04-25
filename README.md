@@ -58,6 +58,7 @@ agent-memory-journal doctor --strict
 ## Python API
 
 The `Journal` class is the primary entry point for agent integration.
+The CLI is a convenience wrapper, not the primary interface.
 
 ```python
 from agent_memory import Journal

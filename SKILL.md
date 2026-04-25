@@ -2,6 +2,9 @@
 
 Manage and retrieve long-term memory using a 3-tier structure (Hot, Warm, Cold).
 
+Primary integration surface: the Python `Journal` API.
+The CLI is a convenience layer for shell and cron workflows.
+
 ## Tools
 
 - `agent-memory-journal note <text>`: Add episodic note.
