@@ -13,11 +13,13 @@ def test_v2_journal_primary_flow(tmp_path):
 
     hits = journal.recall_core('pinned constraint', k=5)
     warm_hits = journal.recall('pinned constraint', k=5, tier='warm')
+    cold_hits = journal.recall('AGENT hot set tiny', k=5, tier='cold')
     ingest = journal.ingest()
     review_log = journal.log_review_findings('review-2', ['Thresholds are duplicated'])
 
     assert hits
     assert warm_hits
+    assert cold_hits
     assert ingest.hot_written >= 1
     assert review_log.notes_written == 1
 
@@ -26,14 +28,13 @@ def test_journal_recall_all_merges_warm_and_cold(tmp_path):
     journal = Journal(root=tmp_path)
     journal.init()
     journal.remember('Pinned constraint for hot set', category='constraint', pinned=True)
-    legacy = LegacyJournal(root=tmp_path)
-    legacy.note('Cold legacy note about pinned constraint')
+    journal.note('Cold v2 note about pinned constraint', category='decision', importance='high')
 
     hits = journal.recall('pinned constraint', k=10, tier='all')
     joined = ' || '.join(item.text for item in hits)
 
     assert 'Pinned constraint for hot set' in joined
-    assert 'Cold legacy note about pinned constraint' in joined
+    assert 'Cold v2 note about pinned constraint' in joined
 
 
 def test_v2_journal_works_with_memory_root(tmp_path):

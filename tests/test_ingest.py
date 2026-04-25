@@ -6,11 +6,11 @@ from agent_memory.ingest import ingest_cycle
 
 def test_ingest_cycle_promotes_and_rebuilds_hot_set(tmp_path: Path):
     journal = Journal(root=tmp_path)
-    journal.note_v2('Use v2 memory as development telemetry', category='decision', importance='high')
+    journal.note('Use v2 memory as development telemetry', category='decision', importance='high')
     episodic = tmp_path / '.memory' / 'episodic'
     episodic.mkdir(parents=True, exist_ok=True)
     (episodic / '2026-04-24.md').write_text('- 10:00 Use v2 memory as development telemetry [category:decision importance:high source:agent]\n', encoding='utf-8')
-    journal.remember_v2('Pinned hot constraint', category='constraint', pinned=True)
+    journal.remember('Pinned hot constraint', category='constraint', pinned=True)
 
     report = ingest_cycle(tmp_path / '.memory')
 

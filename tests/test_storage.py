@@ -18,10 +18,10 @@ def test_init_memory_root_creates_v2_layout(tmp_path: Path):
 
 def test_journal_can_write_v2_episodic_and_core(tmp_path: Path):
     journal = Journal(root=tmp_path)
-    journal.init_v2()
+    journal.init()
 
-    episodic_path = journal.note_v2("Adopted v2 storage for dogfooding", category="decision", importance="high")
-    core_path = journal.remember_v2("AGENT.md must stay tiny", category="constraint", pinned=True)
+    episodic_path = journal.note("Adopted v2 storage for dogfooding", category="decision", importance="high")
+    core_path = journal.remember("AGENT.md must stay tiny", category="constraint", pinned=True)
 
     assert episodic_path.exists()
     assert core_path.exists()

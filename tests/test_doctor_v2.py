@@ -6,7 +6,7 @@ from agent_memory.doctor_v2 import doctor_verify, refresh_manifest
 
 def test_refresh_manifest_tracks_core_hashes(tmp_path: Path):
     journal = Journal(root=tmp_path)
-    journal.remember_v2('Pinned constraint for integrity', category='constraint', pinned=True)
+    journal.remember('Pinned constraint for integrity', category='constraint', pinned=True)
 
     manifest = refresh_manifest(tmp_path / '.memory')
 
@@ -16,7 +16,7 @@ def test_refresh_manifest_tracks_core_hashes(tmp_path: Path):
 
 def test_doctor_verify_detects_manifest_mismatch(tmp_path: Path):
     journal = Journal(root=tmp_path)
-    journal.remember_v2('Stable core memory item', category='decision', pinned=True)
+    journal.remember('Stable core memory item', category='decision', pinned=True)
     refresh_manifest(tmp_path / '.memory')
 
     decisions = tmp_path / '.memory' / 'core' / 'decisions.md'
@@ -31,7 +31,7 @@ def test_doctor_verify_detects_manifest_mismatch(tmp_path: Path):
 
 def test_doctor_verify_checks_hot_limit(tmp_path: Path):
     journal = Journal(root=tmp_path)
-    journal.init_v2()
+    journal.init()
     hot_file = tmp_path / '.memory' / 'AGENT.md'
     hot_file.write_text('# AGENT.md\n\n' + ('x' * 3000), encoding='utf-8')
     refresh_manifest(tmp_path / '.memory')
@@ -44,7 +44,7 @@ def test_doctor_verify_checks_hot_limit(tmp_path: Path):
 
 def test_doctor_verify_refreshes_empty_manifest_tracking(tmp_path: Path):
     journal = Journal(root=tmp_path)
-    journal.remember_v2('Core item should be verified on first doctor run', category='capability', pinned=True)
+    journal.remember('Core item should be verified on first doctor run', category='capability', pinned=True)
 
     report = doctor_verify(tmp_path / '.memory')
 
@@ -54,7 +54,7 @@ def test_doctor_verify_refreshes_empty_manifest_tracking(tmp_path: Path):
 
 def test_doctor_verify_flags_invalid_manifest_shape(tmp_path: Path):
     journal = Journal(root=tmp_path)
-    journal.remember_v2('Core item for malformed manifest test', category='decision', pinned=True)
+    journal.remember('Core item for malformed manifest test', category='decision', pinned=True)
     manifest = tmp_path / '.memory' / 'index' / 'manifest.json'
     manifest.parent.mkdir(parents=True, exist_ok=True)
     manifest.write_text('{"schema": 2, "layout": "broken", "core_sha256": []}\n', encoding='utf-8')

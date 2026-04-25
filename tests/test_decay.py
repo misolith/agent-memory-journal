@@ -6,10 +6,10 @@ from agent_memory.decay import archive_unpinned_core
 
 def test_archive_unpinned_core_moves_excess_bullets(tmp_path: Path):
     journal = Journal(root=tmp_path)
-    journal.init_v2()
+    journal.init()
     for i in range(4):
-        journal.remember_v2(f'Constraint {i}', category='constraint', pinned=False)
-    journal.remember_v2('Pinned constraint', category='constraint', pinned=True)
+        journal.remember(f'Constraint {i}', category='constraint', pinned=False)
+    journal.remember('Pinned constraint', category='constraint', pinned=True)
 
     report = archive_unpinned_core(tmp_path / '.memory', max_active_per_file=3)
     core = (tmp_path / '.memory' / 'core' / 'constraints.md').read_text(encoding='utf-8')
@@ -23,7 +23,7 @@ def test_archive_unpinned_core_moves_excess_bullets(tmp_path: Path):
 
 def test_archive_unpinned_core_keeps_all_when_under_limit(tmp_path: Path):
     journal = Journal(root=tmp_path)
-    journal.remember_v2('Only one decision', category='decision', pinned=False)
+    journal.remember('Only one decision', category='decision', pinned=False)
 
     report = archive_unpinned_core(tmp_path / '.memory', max_active_per_file=5)
 
@@ -33,7 +33,7 @@ def test_archive_unpinned_core_keeps_all_when_under_limit(tmp_path: Path):
 
 def test_archive_unpinned_core_ignores_pinned_text_outside_metadata(tmp_path: Path):
     journal = Journal(root=tmp_path)
-    journal.init_v2()
+    journal.init()
     core_file = tmp_path / '.memory' / 'core' / 'constraints.md'
     with core_file.open('a', encoding='utf-8') as handle:
         handle.write('- avoid literal pinned:true in docs [source:agent]\n')
@@ -51,7 +51,7 @@ def test_archive_unpinned_core_ignores_pinned_text_outside_metadata(tmp_path: Pa
 def test_archive_unpinned_core_is_idempotent(tmp_path: Path):
     journal = Journal(root=tmp_path)
     for i in range(4):
-        journal.remember_v2(f'Decision {i}', category='decision', pinned=False)
+        journal.remember(f'Decision {i}', category='decision', pinned=False)
 
     first = archive_unpinned_core(tmp_path / '.memory', max_active_per_file=2)
     second = archive_unpinned_core(tmp_path / '.memory', max_active_per_file=2)

@@ -5,9 +5,9 @@ from agent_memory import Journal
 
 def test_journal_exposes_v2_helper_methods(tmp_path):
     journal = Journal(root=tmp_path)
-    journal.init_v2()
-    journal.note_v2('Decision: keep AGENT hot set tiny', category='decision', importance='high')
-    journal.remember_v2('Pinned constraint for hot set', category='constraint', pinned=True)
+    journal.init()
+    journal.note('Decision: keep AGENT hot set tiny', category='decision', importance='high')
+    journal.remember('Pinned constraint for hot set', category='constraint', pinned=True)
     journal.session_note('review-1', 'Pinned detection is too loose', category='gotcha', importance='high')
 
     hits = journal.recall_core('pinned constraint', k=5)
@@ -22,8 +22,8 @@ def test_journal_exposes_v2_helper_methods(tmp_path):
 def test_journal_v2_helpers_work_when_root_is_memory_dir(tmp_path):
     memory_root = tmp_path / '.memory'
     journal = Journal(root=memory_root)
-    journal.init_v2()
-    journal.remember_v2('Pinned constraint for direct memory root', category='constraint', pinned=True)
+    journal.init()
+    journal.remember('Pinned constraint for direct memory root', category='constraint', pinned=True)
 
     hits = journal.recall_core('direct memory root', k=5)
     ingest = journal.ingest()
@@ -38,7 +38,7 @@ def test_journal_v2_helpers_work_when_root_is_memory_dir(tmp_path):
 
 def test_journal_recall_core_preserves_limit_semantics(tmp_path):
     journal = Journal(root=tmp_path)
-    journal.remember_v2('Pinned constraint for hot set', category='constraint', pinned=True)
+    journal.remember('Pinned constraint for hot set', category='constraint', pinned=True)
 
     assert journal.recall_core('constraint', k=0) == []
     with pytest.raises(ValueError):

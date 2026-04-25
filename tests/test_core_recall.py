@@ -8,8 +8,8 @@ from agent_memory.core_recall import recall_core
 
 def test_recall_core_finds_relevant_core_entries(tmp_path: Path):
     journal = Journal(root=tmp_path)
-    journal.remember_v2('Keep AGENT.md tiny and pinned', category='constraint', pinned=True)
-    journal.remember_v2('Supports browser control independently', category='capability', pinned=False)
+    journal.remember('Keep AGENT.md tiny and pinned', category='constraint', pinned=True)
+    journal.remember('Supports browser control independently', category='capability', pinned=False)
 
     hits = recall_core(tmp_path / '.memory', 'browser control', k=3)
 
@@ -21,8 +21,8 @@ def test_recall_core_finds_relevant_core_entries(tmp_path: Path):
 
 def test_recall_core_ranks_overlap_above_irrelevant_entries(tmp_path: Path):
     journal = Journal(root=tmp_path)
-    journal.remember_v2('Promotion threshold must stay visible', category='constraint', pinned=False)
-    journal.remember_v2('Keep AGENT.md tiny', category='constraint', pinned=True)
+    journal.remember('Promotion threshold must stay visible', category='constraint', pinned=False)
+    journal.remember('Keep AGENT.md tiny', category='constraint', pinned=True)
 
     hits = recall_core(tmp_path / '.memory', 'promotion threshold', k=2)
 
@@ -32,21 +32,21 @@ def test_recall_core_ranks_overlap_above_irrelevant_entries(tmp_path: Path):
 
 def test_recall_core_blank_query_returns_empty_list(tmp_path: Path):
     journal = Journal(root=tmp_path)
-    journal.remember_v2('Supports browser control independently', category='capability', pinned=False)
+    journal.remember('Supports browser control independently', category='capability', pinned=False)
 
     assert recall_core(tmp_path / '.memory', '   ', k=5) == []
 
 
 def test_recall_core_k_zero_returns_empty_list(tmp_path: Path):
     journal = Journal(root=tmp_path)
-    journal.remember_v2('Supports browser control independently', category='capability', pinned=False)
+    journal.remember('Supports browser control independently', category='capability', pinned=False)
 
     assert recall_core(tmp_path / '.memory', 'browser', k=0) == []
 
 
 def test_recall_core_negative_k_raises(tmp_path: Path):
     journal = Journal(root=tmp_path)
-    journal.remember_v2('Supports browser control independently', category='capability', pinned=False)
+    journal.remember('Supports browser control independently', category='capability', pinned=False)
 
     with pytest.raises(ValueError):
         recall_core(tmp_path / '.memory', 'browser', k=-1)

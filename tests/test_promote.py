@@ -6,7 +6,7 @@ from agent_memory.promote import collect_candidates, promote_repeated_candidates
 
 def test_collect_candidates_merges_simple_paraphrases(tmp_path: Path):
     journal = Journal(root=tmp_path)
-    journal.note_v2('Memory review now supports exact window filtering', category='capability', importance='high')
+    journal.note('Memory review now supports exact window filtering', category='capability', importance='high')
     first = tmp_path / '.memory' / 'episodic' / '2026-04-25.md'
     text = first.read_text(encoding='utf-8').replace('2026-04-25', '2026-04-24')
     older = tmp_path / '.memory' / 'episodic' / '2026-04-24.md'
@@ -22,7 +22,7 @@ def test_collect_candidates_merges_simple_paraphrases(tmp_path: Path):
 
 def test_promote_repeated_candidates_promotes_to_core(tmp_path: Path):
     journal = Journal(root=tmp_path)
-    journal.note_v2('Main branch must stay stable during the rewrite', category='constraint', importance='high')
+    journal.note('Main branch must stay stable during the rewrite', category='constraint', importance='high')
     episodic = tmp_path / '.memory' / 'episodic'
     (episodic / '2026-04-24.md').write_text('- 08:00 Main branch must remain stable during rewrite work [category:constraint importance:high source:agent]\n', encoding='utf-8')
 
@@ -35,7 +35,7 @@ def test_promote_repeated_candidates_promotes_to_core(tmp_path: Path):
 
 def test_collect_candidates_merges_high_overlap_claims(tmp_path: Path):
     journal = Journal(root=tmp_path)
-    journal.note_v2('Constraint: report only after code, commit, push, or a real blocker, not after intention alone.', category='constraint', importance='high')
+    journal.note('Constraint: report only after code, commit, push, or a real blocker, not after intention alone.', category='constraint', importance='high')
     episodic = tmp_path / '.memory' / 'episodic'
     (episodic / '2026-04-24.md').write_text('- 08:00 Report only after visible progress or a blocker, never after intent alone [category:constraint importance:high source:agent]\n', encoding='utf-8')
 

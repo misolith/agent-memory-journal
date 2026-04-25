@@ -6,8 +6,8 @@ from agent_memory.hot import rebuild_agent_md
 
 def test_rebuild_agent_md_includes_only_pinned_items(tmp_path: Path):
     journal = Journal(root=tmp_path)
-    journal.remember_v2('Pinned constraint should appear', category='constraint', pinned=True)
-    journal.remember_v2('Unpinned decision should not appear', category='decision', pinned=False)
+    journal.remember('Pinned constraint should appear', category='constraint', pinned=True)
+    journal.remember('Unpinned decision should not appear', category='decision', pinned=False)
 
     result = rebuild_agent_md(tmp_path / '.memory')
     content = (tmp_path / '.memory' / 'AGENT.md').read_text(encoding='utf-8')
@@ -19,8 +19,8 @@ def test_rebuild_agent_md_includes_only_pinned_items(tmp_path: Path):
 
 def test_rebuild_agent_md_enforces_char_limit(tmp_path: Path):
     journal = Journal(root=tmp_path)
-    journal.remember_v2('A' * 80, category='constraint', pinned=True)
-    journal.remember_v2('B' * 80, category='decision', pinned=True)
+    journal.remember('A' * 80, category='constraint', pinned=True)
+    journal.remember('B' * 80, category='decision', pinned=True)
 
     result = rebuild_agent_md(tmp_path / '.memory', max_chars=200)
     content = (tmp_path / '.memory' / 'AGENT.md').read_text(encoding='utf-8')

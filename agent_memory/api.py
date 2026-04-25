@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Iterable
 
 from .core_recall import recall_core
+from .episodic_recall import recall_episodic
 from .ingest import ingest_cycle
 from .models import RecallResult
 from .normalize import token_counter
@@ -68,10 +69,10 @@ class Journal:
         if tier == 'warm':
             return self.recall_core(query, k=k)
         if tier == 'cold':
-            return LegacyJournal(self.root if self.root.name != '.memory' else self.root.parent).recall(query=query, k=k, tier='cold')
+            return recall_episodic(self.v2_root, query=query, k=k)
         if tier == 'all':
             warm_hits = self.recall_core(query, k=max(1, k))
-            cold_hits = LegacyJournal(self.root if self.root.name != '.memory' else self.root.parent).recall(query=query, k=max(1, k), tier='cold')
+            cold_hits = recall_episodic(self.v2_root, query=query, k=max(1, k))
             merged = list(warm_hits) + list(cold_hits)
             merged.sort(key=lambda item: (-item.score, getattr(item, 'path', ''), getattr(item, 'line_no', 0)))
             return merged[: max(1, k)]
@@ -85,15 +86,6 @@ class Journal:
 
     def session_note(self, session_id: str, text: str, category: str | None = None, importance: str = 'normal', source: str = 'agent') -> Path:
         return append_session_note(self.v2_root, session_id=session_id, text=text, category=category, importance=importance, source=source)
-
-    def init_v2(self) -> Path:
-        return self.init()
-
-    def note_v2(self, text: str, category: str | None = None, importance: str = 'normal', source: str = 'agent') -> Path:
-        return self.note(text=text, category=category, importance=importance, source=source)
-
-    def remember_v2(self, text: str, category: str, source: str = 'agent', pinned: bool = False, supersedes: str | None = None) -> Path:
-        return self.remember(text=text, category=category, source=source, pinned=pinned, supersedes=supersedes)
 
     def recall_core(self, query: str, k: int = 5):
         return recall_core(self.v2_root, query=query, k=k)
