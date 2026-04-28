@@ -12,6 +12,7 @@ from .migrate import import_legacy_workspace
 from .analytics import memory_stats, memory_topics, memory_cadence, memory_digest, extract_candidates
 from .promote import collect_candidates, DEFAULT_TRIGGERS
 from .episodic_recall import recall_episodic, recall_recent
+from .session import collect_session_candidates
 
 
 def _resolve_version() -> str:
@@ -110,6 +111,15 @@ def main():
     rc.add_argument("--json", action="store_true")
     rc.add_argument("--grep")
 
+    # Session commands
+    sp = sub.add_parser("session-prune", help="Archive stale session notes")
+    sp.add_argument("--days", type=int, default=7)
+    sp.add_argument("--dry-run", action="store_true")
+    sp.add_argument("--json", action="store_true")
+
+    sc = sub.add_parser("session-candidates", help="Show recurring candidates across session notes")
+    sc.add_argument("--json", action="store_true")
+
     # Search command
     sh = sub.add_parser("search", help="Search memory")
     sh.add_argument("--query", required=True)
@@ -193,6 +203,25 @@ def main():
         else:
             for h in hits:
                 print(f"- {h.text}")
+    elif args.cmd == "session-prune":
+        result = journal.prune_sessions(days=args.days, dry_run=args.dry_run)
+        payload = {
+            "archived": result.archived,
+            "kept": result.kept,
+            "cutoff": result.cutoff_iso,
+            "dry_run": args.dry_run,
+        }
+        if args.json:
+            print(json.dumps(payload, indent=2))
+        else:
+            print(f"Archived {len(result.archived)} session file(s); kept {len(result.kept)}. Cutoff: {result.cutoff_iso}")
+    elif args.cmd == "session-candidates":
+        candidates = collect_session_candidates(journal.v2_root)
+        if args.json:
+            print(json.dumps([c.__dict__ for c in candidates], indent=2))
+        else:
+            for c in candidates:
+                print(f"- {c.text} ({c.occurrences} hits across {c.distinct_days} sessions)")
     elif args.cmd == "search":
         hits = journal.recall(args.query, tier=args.tier)
         if args.json:

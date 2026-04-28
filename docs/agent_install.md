@@ -71,6 +71,7 @@ For agents, the recommended startup contract is:
 3. Use `agent-memory-journal note "..."` for episodic observations
 4. Use `agent-memory-journal remember "..." --category ...` for durable facts
 5. Run `agent-memory-journal ingest` during maintenance / heartbeat cycles
+6. Run `agent-memory-journal session-prune --days 7` during maintenance if session files are used heavily
 
 ## Hot memory target override
 

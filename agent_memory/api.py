@@ -9,6 +9,7 @@ from .ingest import ingest_cycle
 from .legacy import LegacyJournal
 from .models import RecallResult
 from .review_memory import log_review_findings
+from .session import prune_sessions
 from .storage import append_core_memory, append_episodic_note, append_session_note, init_memory_root, supersede_memory
 
 WARM_SCORE_WEIGHT = 2.0
@@ -107,3 +108,6 @@ class Journal:
 
     def log_review_findings(self, session_id: str, findings: list[str], category: str = 'gotcha'):
         return log_review_findings(self.v2_root, session_id=session_id, findings=findings, category=category)
+
+    def prune_sessions(self, days: int = 7, dry_run: bool = False, now=None):
+        return prune_sessions(self.v2_root, days=days, dry_run=dry_run, now=now)

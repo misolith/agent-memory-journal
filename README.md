@@ -62,6 +62,12 @@ agent-memory-journal forget con-12345
 # Perform ingestion (Promote repeated facts & rebuild AGENT.md)
 agent-memory-journal ingest
 
+# Archive stale session notes after 7 inactive days
+agent-memory-journal session-prune --days 7
+
+# Inspect recurring claims that appear across multiple session files
+agent-memory-journal session-candidates
+
 # Verify memory integrity
 agent-memory-journal doctor --strict
 ```
@@ -100,7 +106,7 @@ To prevent the Warm tier from becoming a "junk drawer," `ingest` runs `archive_u
 
 ### Session Management
 Short-term session memory is stored in `.memory/sessions/<session_id>.md`.
-*   **Lifecycle**: Currently, sessions are persistent files. Future versions will support TTL-based cleanup.
+*   **Lifecycle**: Session files are append-only during active work and can be archived with `agent-memory-journal session-prune --days <N>`. The default operational policy is a 7-day inactivity TTL, based on file modification time.
 *   **Context**: Agents can use `j.session_note(session_id, text)` to record ephemeral context that doesn't yet belong in the long-term episodic log.
 
 ### Integrity & Safety

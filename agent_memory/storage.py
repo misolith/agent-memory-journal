@@ -131,6 +131,10 @@ class MemoryPaths:
         return self.root / 'archive' / 'core'
 
     @property
+    def archive_sessions_dir(self) -> Path:
+        return self.root / 'archive' / 'sessions'
+
+    @property
     def index_dir(self) -> Path:
         return self.root / 'index'
 
@@ -155,6 +159,7 @@ def init_memory_root(root: str | Path) -> MemoryPaths:
     paths.core_dir.mkdir(parents=True, exist_ok=True)
     paths.sessions_dir.mkdir(parents=True, exist_ok=True)
     paths.archive_core_dir.mkdir(parents=True, exist_ok=True)
+    paths.archive_sessions_dir.mkdir(parents=True, exist_ok=True)
     paths.index_dir.mkdir(parents=True, exist_ok=True)
     if not paths.config_file.exists():
         paths.config_file.write_text(json.dumps({

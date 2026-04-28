@@ -24,22 +24,22 @@ Required decision:
 
 ## 2. What is a session exactly?
 
-Status: Open
+Status: Resolved for V1
 
 Why it matters:
 - promotion rules refer to distinct sessions
 - architecture includes `sessions/`
 - without lifecycle rules, session memory will drift into another cold pile
 
-Questions to answer:
-- what creates a session id?
-- does one interactive thread equal one session?
-- do subagents inherit parent session id or get child ids?
-- when does session TTL expire?
-- what cleanup mechanism removes expired sessions?
+V1 decision:
+- one session maps to one `.memory/sessions/<session-id>.md` file
+- the caller owns the session id, so an interactive thread, a subagent run, or a review task may each use their own file
+- parent and child agents should use distinct session ids when their transient context diverges
+- session inactivity TTL is **7 days**, measured by file modification time
+- cleanup is explicit and reversible via `agent-memory-journal session-prune --days 7`, which moves stale files into `archive/sessions/`
 
-Required decision:
-- define session ownership, lifecycle, TTL, and cleanup policy
+Fallback behavior:
+- if no prune cycle runs, sessions remain readable and harmless; they simply accumulate until archived
 
 ## 3. How are stable ids generated?
 

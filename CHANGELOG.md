@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.4 (2026-04-28)
+- define the V1 session lifecycle: one file per session id, 7-day inactivity TTL, archive-first cleanup policy
+- add `Journal.prune_sessions()` plus CLI commands `session-prune` and `session-candidates`
+- archive stale session files into `.memory/archive/sessions/` instead of deleting them, preserving transient audit trails
+- add tests for stale session pruning and dry-run safety
+
 ## 0.2.3 (2026-04-25)
 - add `tests/conftest.py` so `pytest -q` works from a fresh source checkout without installing the package first
 - fix `digest` CLI command crashing with `AttributeError` on `MemoryPaths.v2_root`

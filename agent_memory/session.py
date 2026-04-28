@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import re
+import shutil
+from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from .normalize import claims_match, token_counter
@@ -9,6 +12,13 @@ from .storage import VALID_CATEGORIES, init_memory_root
 
 SESSION_LINE_RE = re.compile(r"^-\s+(\d{2}:\d{2})\s+(.*?)(?:\s+\[(.*)\])?$")
 FIELD_RE = re.compile(r"(category|importance|source):([^\s\]]+)")
+
+
+@dataclass
+class SessionPruneResult:
+    archived: list[str]
+    kept: list[str]
+    cutoff_iso: str
 
 
 def _parse_metadata(blob: str | None) -> dict[str, str]:
@@ -77,3 +87,33 @@ def collect_session_candidates(root: str | Path, match_threshold: float = DEFAUL
         ))
     out.sort(key=lambda item: (-item.score, item.text.lower()))
     return out
+
+
+def prune_sessions(root: str | Path, days: int = 7, now: datetime | None = None, dry_run: bool = False) -> SessionPruneResult:
+    if days < 1:
+        raise ValueError('days must be >= 1')
+
+    paths = init_memory_root(root)
+    effective_now = now or datetime.now(timezone.utc)
+    if effective_now.tzinfo is None:
+        effective_now = effective_now.replace(tzinfo=timezone.utc)
+    cutoff = effective_now - timedelta(days=days)
+
+    archived: list[str] = []
+    kept: list[str] = []
+    for path in sorted(paths.sessions_dir.glob('*.md')):
+        last_modified = datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc)
+        if last_modified < cutoff:
+            archived.append(path.name)
+            if not dry_run:
+                target = paths.archive_sessions_dir / path.name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.move(str(path), str(target))
+        else:
+            kept.append(path.name)
+
+    return SessionPruneResult(
+        archived=archived,
+        kept=kept,
+        cutoff_iso=cutoff.replace(microsecond=0).isoformat(),
+    )
