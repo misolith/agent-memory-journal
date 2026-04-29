@@ -164,7 +164,7 @@ def main():
             print(f"Episodic candidates: {report.episodic_candidates}")
             print(f"Pinned items: {report.pinned_core_items}")
     elif args.cmd == "doctor":
-        report = doctor_verify(journal.v2_root, fix=args.fix)
+        report = doctor_verify(journal.v2_root, fix=args.fix, after=args.after, before=args.before)
         if args.json:
             print(json.dumps(report.__dict__ if hasattr(report, "__dict__") else report, indent=2))
         else:

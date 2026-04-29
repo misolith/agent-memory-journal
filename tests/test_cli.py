@@ -75,3 +75,17 @@ def test_cli_doctor_stays_ok_after_forget(tmp_path: Path, capsys: pytest.Capture
     out = capsys.readouterr().out
     payload = json.loads(out)
     assert payload['status'] == 'OK', payload
+
+
+def test_cli_doctor_accepts_date_window_flags(tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch):
+    _run(monkeypatch, ['--root', str(tmp_path), 'init'])
+    capsys.readouterr()
+    (tmp_path / '.memory' / 'core' / 'decisions.md').write_text(
+        '# Decisions\n\n- Fresh item [id:dec-fresh state:active source:agent created:2026-04-29T10:00:00+00:00 last_seen:2026-04-29T10:00:00+00:00]\n',
+        encoding='utf-8',
+    )
+    _run(monkeypatch, ['--root', str(tmp_path), 'doctor', '--json', '--after', '2026-04-28', '--before', '2026-04-30'])
+    out = capsys.readouterr().out
+    payload = json.loads(out)
+    assert payload['status'] == 'OK', payload
+    assert payload['checked_files'] >= 1, payload

@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from dataclasses import dataclass
+from datetime import date, datetime
 from pathlib import Path
 
 from .hot import effective_hot_budget
@@ -39,7 +41,35 @@ def refresh_manifest(root: str | Path) -> dict[str, object]:
     return manifest
 
 
-def doctor_verify(root: str | Path, fix: bool = False) -> DoctorReport:
+_DATE_RE = re.compile(r'(?:created|last_seen):([^\s\]]+)')
+
+
+def _parse_entry_dates(text: str) -> list[date]:
+    dates: list[date] = []
+    for raw in _DATE_RE.findall(text):
+        try:
+            dates.append(datetime.fromisoformat(raw).date())
+        except ValueError:
+            continue
+    return dates
+
+
+def _file_matches_date_window(path: Path, after: date | None, before: date | None) -> bool:
+    if after is None and before is None:
+        return True
+    entry_dates = _parse_entry_dates(path.read_text(encoding='utf-8', errors='ignore'))
+    if not entry_dates:
+        return False
+    for entry_date in entry_dates:
+        if after is not None and entry_date < after:
+            continue
+        if before is not None and entry_date > before:
+            continue
+        return True
+    return False
+
+
+def doctor_verify(root: str | Path, fix: bool = False, after: date | None = None, before: date | None = None) -> DoctorReport:
     paths = init_memory_root(root)
     manifest_path = paths.index_dir / 'manifest.json'
     if not manifest_path.exists() or fix:
@@ -74,10 +104,13 @@ def doctor_verify(root: str | Path, fix: bool = False) -> DoctorReport:
             mismatches.append('invalid:core_sha256-entry')
             continue
         file_path = paths.root / rel_path
-        checked += 1
         if not file_path.exists():
+            checked += 1
             mismatches.append(f'missing:{rel_path}')
             continue
+        if not _file_matches_date_window(file_path, after=after, before=before):
+            continue
+        checked += 1
         actual = _hash_file(file_path)
         if actual != expected:
             mismatches.append(f'mismatch:{rel_path}')
