@@ -89,3 +89,19 @@ def test_cli_doctor_accepts_date_window_flags(tmp_path: Path, capsys: pytest.Cap
     payload = json.loads(out)
     assert payload['status'] == 'OK', payload
     assert payload['checked_files'] >= 1, payload
+
+
+def test_cli_doctor_reports_clean_empty_window(tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch):
+    _run(monkeypatch, ['--root', str(tmp_path), 'init'])
+    capsys.readouterr()
+    (tmp_path / '.memory' / 'core' / 'decisions.md').write_text(
+        '# Decisions\n\n- Old item [id:dec-old state:active source:agent created:2026-04-20T10:00:00+00:00 last_seen:2026-04-20T10:00:00+00:00]\n',
+        encoding='utf-8',
+    )
+    _run(monkeypatch, ['--root', str(tmp_path), 'doctor', '--json', '--after', '2026-04-25', '--before', '2026-04-30'])
+    out = capsys.readouterr().out
+    payload = json.loads(out)
+    assert payload['status'] == 'OK', payload
+    assert payload['checked_files'] == 0, payload
+    assert payload['skipped_files'] >= 1, payload
+    assert payload['window_empty'] is True, payload

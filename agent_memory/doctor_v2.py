@@ -18,6 +18,8 @@ class DoctorReport:
     hot_over_limit: bool
     manifest_mismatches: list[str]
     checked_files: int
+    skipped_files: int
+    window_empty: bool
 
 
 def _hash_file(path: Path) -> str:
@@ -95,6 +97,7 @@ def doctor_verify(root: str | Path, fix: bool = False, after: date | None = None
         tracked = manifest.get('core_sha256', {})
 
     checked = 0
+    skipped = 0
     if not isinstance(tracked, dict):
         mismatches.append('invalid:core_sha256')
         tracked = {}
@@ -109,6 +112,7 @@ def doctor_verify(root: str | Path, fix: bool = False, after: date | None = None
             mismatches.append(f'missing:{rel_path}')
             continue
         if not _file_matches_date_window(file_path, after=after, before=before):
+            skipped += 1
             continue
         checked += 1
         actual = _hash_file(file_path)
@@ -117,11 +121,14 @@ def doctor_verify(root: str | Path, fix: bool = False, after: date | None = None
     hot_chars = len(paths.hot_file.read_text(encoding='utf-8', errors='ignore')) if paths.hot_file.exists() else 0
     hot_budget = effective_hot_budget(paths.config)
     hot_over_limit = hot_chars > hot_budget
-    status = 'OK' if not mismatches and not hot_over_limit and checked > 0 else 'ISSUES_FOUND'
+    window_empty = checked == 0 and skipped > 0
+    status = 'OK' if not mismatches and not hot_over_limit and (checked > 0 or window_empty) else 'ISSUES_FOUND'
     return DoctorReport(
         status=status,
         hot_chars=hot_chars,
         hot_over_limit=hot_over_limit,
         manifest_mismatches=mismatches,
         checked_files=checked,
+        skipped_files=skipped,
+        window_empty=window_empty,
     )

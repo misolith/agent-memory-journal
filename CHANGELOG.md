@@ -3,6 +3,7 @@
 ## Unreleased
 - make `doctor --after/--before` real by scoping integrity checks to core files whose `created` or `last_seen` metadata falls inside the requested date window
 - add regression tests for date-scoped doctor runs at both API and CLI layers
+- treat empty `doctor --after/--before` windows as a clean scoped result instead of a false `ISSUES_FOUND`, and expose `skipped_files` / `window_empty` in the report
 
 ## 0.2.4 (2026-04-28)
 - define the V1 session lifecycle: one file per session id, 7-day inactivity TTL, archive-first cleanup policy

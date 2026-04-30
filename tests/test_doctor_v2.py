@@ -92,3 +92,21 @@ def test_doctor_verify_can_scope_checks_by_date_window(tmp_path: Path):
     assert scoped.checked_files == 1
     assert full.status == 'ISSUES_FOUND'
     assert any(item.startswith('mismatch:core/decisions.md') for item in full.manifest_mismatches)
+
+
+def test_doctor_verify_treats_empty_date_window_as_clean_scope(tmp_path: Path):
+    journal = Journal(root=tmp_path)
+    journal.init()
+    decisions = tmp_path / '.memory' / 'core' / 'decisions.md'
+    decisions.write_text(
+        '# Decisions\n\n- Old decision [id:dec-old state:active source:agent created:2026-04-20T10:00:00+00:00 last_seen:2026-04-20T10:00:00+00:00]\n',
+        encoding='utf-8',
+    )
+    refresh_manifest(tmp_path / '.memory')
+
+    report = doctor_verify(tmp_path / '.memory', after=date(2026, 4, 25), before=date(2026, 4, 30))
+
+    assert report.status == 'OK'
+    assert report.checked_files == 0
+    assert report.skipped_files >= 1
+    assert report.window_empty is True
