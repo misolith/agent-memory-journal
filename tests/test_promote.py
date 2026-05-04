@@ -6,9 +6,7 @@ from agent_memory.promote import collect_candidates, promote_repeated_candidates
 
 def test_collect_candidates_merges_simple_paraphrases(tmp_path: Path):
     journal = Journal(root=tmp_path)
-    journal.note('Memory review now supports exact window filtering', category='capability', importance='high')
-    first = tmp_path / '.memory' / 'episodic' / '2026-04-25.md'
-    text = first.read_text(encoding='utf-8').replace('2026-04-25', '2026-04-24')
+    first = journal.note('Memory review now supports exact window filtering', category='capability', importance='high')
     older = tmp_path / '.memory' / 'episodic' / '2026-04-24.md'
     older.write_text('- 09:00 Exact filtering windows are now supported for memory review [category:capability importance:high source:agent]\n', encoding='utf-8')
 
